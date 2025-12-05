@@ -3,14 +3,21 @@ import { useBakery } from '../context/BakeryContext';
 import { Ingredient, UnitType } from '../types';
 import { UNIT_OPTIONS, BASE_UNITS } from '../constants';
 import { formatStock, toBaseUnit, fromBaseUnit } from '../utils/conversions';
-import { Plus, Search, Edit2, Save, X } from 'lucide-react';
+import { Plus, Search, Edit2, Save, X, RefreshCw } from 'lucide-react';
 
 export const Inventory: React.FC = () => {
   const { ingredients, addIngredient, updateIngredientStock } = useBakery();
+  
+  // State for Create Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // State for Edit (Adjust) Modal
+  const [editingItem, setEditingItem] = useState<Ingredient | null>(null);
+  const [editStockValue, setEditStockValue] = useState<string>('');
+
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Form State
+  // Form State for New Ingredient
   const [newIng, setNewIng] = useState<Partial<Ingredient>>({
     name: '',
     unit: UnitType.GRAMS,
@@ -19,10 +26,10 @@ export const Inventory: React.FC = () => {
     costPerUnit: 0
   });
 
+  // Handler: Create New
   const handleAdd = () => {
     if (!newIng.name || newIng.currentStock === undefined) return;
     
-    // Convert entered values to base unit for storage
     const stockInBase = toBaseUnit(newIng.currentStock, newIng.unit as UnitType);
     const minStockInBase = toBaseUnit(newIng.minStock || 0, newIng.unit as UnitType);
 
@@ -38,6 +45,28 @@ export const Inventory: React.FC = () => {
     addIngredient(ingredient);
     setIsModalOpen(false);
     setNewIng({ name: '', unit: UnitType.GRAMS, currentStock: 0, minStock: 0, costPerUnit: 0 });
+  };
+
+  // Handler: Open Edit Modal
+  const handleEditClick = (ing: Ingredient) => {
+    setEditingItem(ing);
+    // Show value in preferred unit (e.g. if stock is 1500g and unit is kg, show 1.5)
+    const val = fromBaseUnit(ing.currentStock, ing.unit);
+    setEditStockValue(val.toString());
+  };
+
+  // Handler: Save Edit
+  const handleSaveEdit = () => {
+    if (!editingItem) return;
+    const val = parseFloat(editStockValue);
+    if (isNaN(val) || val < 0) return;
+
+    // Convert back to base unit for storage
+    const newStockBase = toBaseUnit(val, editingItem.unit);
+    updateIngredientStock(editingItem.id, newStockBase);
+    
+    setEditingItem(null);
+    setEditStockValue('');
   };
 
   const filtered = ingredients.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -93,7 +122,12 @@ export const Inventory: React.FC = () => {
                       {BASE_UNITS[ing.unit]}
                     </td>
                     <td className="px-6 py-4">
-                      <button className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">Ajustar</button>
+                      <button 
+                        onClick={() => handleEditClick(ing)}
+                        className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center gap-1"
+                      >
+                        <Edit2 size={16} /> Ajustar
+                      </button>
                     </td>
                   </tr>
                 );
@@ -103,7 +137,7 @@ export const Inventory: React.FC = () => {
         </div>
       </div>
 
-      {/* Simple Add Modal */}
+      {/* Create Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
@@ -173,6 +207,61 @@ export const Inventory: React.FC = () => {
               >
                 Guardar Ingrediente
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Adjust Stock Modal */}
+      {editingItem && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-800 text-white">
+              <h3 className="font-bold flex items-center gap-2">
+                <RefreshCw size={18} /> Ajustar Stock
+              </h3>
+              <button onClick={() => setEditingItem(null)}><X size={20} /></button>
+            </div>
+            
+            <div className="p-6">
+              <div className="mb-4 text-center">
+                <h4 className="text-lg font-semibold text-slate-800">{editingItem.name}</h4>
+                <p className="text-sm text-slate-500">Actualiza la cantidad física disponible</p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Nuevo Stock ({editingItem.unit})
+                </label>
+                <div className="relative">
+                  <input 
+                    type="number"
+                    step="any"
+                    className="w-full p-3 border border-slate-300 rounded-lg text-lg font-bold text-center focus:ring-2 focus:ring-indigo-500 outline-none"
+                    value={editStockValue}
+                    onChange={e => setEditStockValue(e.target.value)}
+                    autoFocus
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
+                    {editingItem.unit}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setEditingItem(null)}
+                  className="flex-1 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={handleSaveEdit}
+                  className="flex-1 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-md"
+                >
+                  Confirmar
+                </button>
+              </div>
             </div>
           </div>
         </div>
