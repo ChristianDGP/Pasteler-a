@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useBakery } from '../context/BakeryContext';
 import { Order, OrderStatus } from '../types';
 import { STATUS_COLORS } from '../constants';
-import { Plus, X, CheckCircle, Clock } from 'lucide-react';
+import { Plus, X, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
 export const Orders: React.FC = () => {
   const { orders, products, addOrder, updateOrderStatus } = useBakery();
@@ -14,16 +14,38 @@ export const Orders: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState('');
   const [qty, setQty] = useState(1);
   const [cart, setCart] = useState<{productId: string, quantity: number}[]>([]);
+  
+  // Error state for validation
+  const [error, setError] = useState('');
 
   const addToCart = () => {
     if(!selectedProduct) return;
     setCart([...cart, { productId: selectedProduct, quantity: qty }]);
     setSelectedProduct('');
     setQty(1);
+    setError(''); // Clear error when user takes action
+  };
+  
+  const removeFromCart = (index: number) => {
+    setCart(cart.filter((_, idx) => idx !== index));
   };
 
   const handleCreateOrder = () => {
-    if(!customer || !date || cart.length === 0) return;
+    setError('');
+    
+    // Validations
+    if(!customer.trim()) {
+      setError('Por favor ingresa el nombre del cliente.');
+      return;
+    }
+    if(!date) {
+      setError('Por favor selecciona una fecha de entrega.');
+      return;
+    }
+    if(cart.length === 0) {
+      setError('Debes agregar al menos un producto a la lista con el botón "+".');
+      return;
+    }
     
     // Calculate total
     let total = 0;
@@ -42,10 +64,17 @@ export const Orders: React.FC = () => {
     };
 
     addOrder(newOrder);
+    closeModal();
+  };
+  
+  const closeModal = () => {
     setIsModalOpen(false);
     setCart([]);
     setCustomer('');
     setDate('');
+    setError('');
+    setSelectedProduct('');
+    setQty(1);
   };
 
   const statusOptions: OrderStatus[] = ['Pendiente', 'En Proceso', 'Completado', 'Entregado', 'Cancelado'];
@@ -109,43 +138,84 @@ export const Orders: React.FC = () => {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-indigo-600 text-white">
               <h3 className="font-bold">Nuevo Pedido</h3>
-              <button onClick={() => setIsModalOpen(false)}><X size={20} /></button>
+              <button onClick={closeModal}><X size={20} /></button>
             </div>
             <div className="p-6 space-y-4">
                <div>
                   <label className="block text-sm font-medium text-slate-700">Cliente</label>
-                  <input className="w-full p-2 border rounded" value={customer} onChange={e => setCustomer(e.target.value)} />
+                  <input 
+                    className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none" 
+                    value={customer} 
+                    onChange={e => setCustomer(e.target.value)} 
+                    placeholder="Nombre del cliente"
+                  />
                </div>
                <div>
                   <label className="block text-sm font-medium text-slate-700">Fecha de Entrega</label>
-                  <input type="date" className="w-full p-2 border rounded" value={date} onChange={e => setDate(e.target.value)} />
+                  <input 
+                    type="date" 
+                    className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none" 
+                    value={date} 
+                    onChange={e => setDate(e.target.value)} 
+                  />
                </div>
 
                <div className="bg-slate-50 p-4 rounded-lg">
                  <h4 className="font-medium text-slate-700 mb-2">Agregar Productos</h4>
                  <div className="flex gap-2 mb-2">
-                    <select className="flex-1 p-2 border rounded text-sm" value={selectedProduct} onChange={e => setSelectedProduct(e.target.value)}>
-                        <option value="">Producto...</option>
+                    <select 
+                        className="flex-1 p-2 border rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none" 
+                        value={selectedProduct} 
+                        onChange={e => setSelectedProduct(e.target.value)}
+                    >
+                        <option value="">Seleccionar Producto...</option>
                         {products.map(p => <option key={p.id} value={p.id}>{p.name} (${p.price})</option>)}
                     </select>
-                    <input type="number" className="w-20 p-2 border rounded text-sm" value={qty} onChange={e => setQty(Number(e.target.value))} />
-                    <button onClick={addToCart} className="bg-slate-800 text-white p-2 rounded"><Plus size={18} /></button>
+                    <input 
+                        type="number" 
+                        min="1"
+                        className="w-20 p-2 border rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none" 
+                        value={qty} 
+                        onChange={e => setQty(Math.max(1, Number(e.target.value)))} 
+                    />
+                    <button 
+                        onClick={addToCart} 
+                        className="bg-slate-800 text-white p-2 rounded hover:bg-slate-900 transition-colors"
+                        disabled={!selectedProduct}
+                    >
+                        <Plus size={18} />
+                    </button>
                  </div>
                  
                  <div className="space-y-1">
+                    {cart.length === 0 && (
+                        <p className="text-xs text-slate-400 italic text-center py-2">No hay productos en la lista</p>
+                    )}
                     {cart.map((item, i) => {
                         const pName = products.find(p => p.id === item.productId)?.name;
                         return (
-                            <div key={i} className="flex justify-between text-sm bg-white p-2 rounded shadow-sm">
+                            <div key={i} className="flex justify-between text-sm bg-white p-2 rounded shadow-sm border border-slate-100">
                                 <span>{item.quantity}x {pName}</span>
-                                <button onClick={() => setCart(cart.filter((_, idx) => idx !== i))} className="text-red-500"><X size={14}/></button>
+                                <button onClick={() => removeFromCart(i)} className="text-red-500 hover:text-red-700"><X size={14}/></button>
                             </div>
                         )
                     })}
                  </div>
                </div>
 
-               <button onClick={handleCreateOrder} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold">Confirmar Pedido</button>
+               {error && (
+                 <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm flex items-center gap-2">
+                   <AlertCircle size={16} className="shrink-0" />
+                   {error}
+                 </div>
+               )}
+
+               <button 
+                onClick={handleCreateOrder} 
+                className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition-colors shadow-md"
+               >
+                Confirmar Pedido
+               </button>
             </div>
           </div>
         </div>
