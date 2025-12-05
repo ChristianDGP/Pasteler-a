@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Ingredient, Product, Order, OrderStatus, UnitType } from '../types';
-import { toBaseUnit } from '../utils/conversions';
+import { toBaseUnit, fromBaseUnit } from '../utils/conversions';
 
 // Initial Mock Data to populate the app
 const INITIAL_INGREDIENTS: Ingredient[] = [
@@ -58,7 +58,7 @@ interface BakeryContextType {
   products: Product[];
   orders: Order[];
   addIngredient: (ing: Ingredient) => void;
-  updateIngredientStock: (id: string, newAmount: number) => void;
+  updateIngredientStock: (id: string, newAmount: number, newUnitCost?: number) => void;
   addProduct: (prod: Product) => void;
   addOrder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
@@ -75,8 +75,44 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const addIngredient = (ing: Ingredient) => setIngredients(prev => [...prev, ing]);
   
-  const updateIngredientStock = (id: string, newAmount: number) => {
-    setIngredients(prev => prev.map(ing => ing.id === id ? { ...ing, currentStock: newAmount } : ing));
+  /**
+   * Updates stock and calculates Weighted Average Cost (Precio Medio Ponderado)
+   * @param id Ingredient ID
+   * @param newAmount The Total New Stock Level (in base units)
+   * @param newUnitCost (Optional) The price paid per DISPLAY unit for the ADDED stock.
+   */
+  const updateIngredientStock = (id: string, newAmount: number, newUnitCost?: number) => {
+    setIngredients(prev => prev.map(ing => {
+      if (ing.id !== id) return ing;
+
+      // Weighted Average Cost Logic
+      // Only apply if stock is increasing and a cost was provided
+      if (newAmount > ing.currentStock && newUnitCost !== undefined && newUnitCost > 0) {
+        const addedAmountBase = newAmount - ing.currentStock;
+        
+        // Convert amounts to Display Unit for cost calculation
+        const currentStockDisplay = fromBaseUnit(ing.currentStock, ing.unit);
+        const addedAmountDisplay = fromBaseUnit(addedAmountBase, ing.unit);
+        const newTotalDisplay = fromBaseUnit(newAmount, ing.unit);
+
+        // Value of existing stock
+        const oldValue = currentStockDisplay * ing.costPerUnit;
+        // Value of new purchase
+        const newValue = addedAmountDisplay * newUnitCost;
+        
+        // New Weighted Average
+        const newAverageCost = (oldValue + newValue) / newTotalDisplay;
+        
+        return { 
+          ...ing, 
+          currentStock: newAmount,
+          costPerUnit: parseFloat(newAverageCost.toFixed(2))
+        };
+      }
+
+      // If just correcting stock or reducing, or no price provided, keep old cost
+      return { ...ing, currentStock: newAmount };
+    }));
   };
 
   const addProduct = (prod: Product) => setProducts(prev => [...prev, prod]);

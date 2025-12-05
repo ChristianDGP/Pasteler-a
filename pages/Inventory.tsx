@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBakery } from '../context/BakeryContext';
 import { Ingredient, UnitType } from '../types';
 import { UNIT_OPTIONS, BASE_UNITS } from '../constants';
 import { formatStock, toBaseUnit, fromBaseUnit } from '../utils/conversions';
-import { Plus, Search, Edit2, Save, X, RefreshCw } from 'lucide-react';
+import { Plus, Search, Edit2, Save, X, RefreshCw, TrendingUp } from 'lucide-react';
 
 export const Inventory: React.FC = () => {
   const { ingredients, addIngredient, updateIngredientStock } = useBakery();
@@ -14,6 +14,7 @@ export const Inventory: React.FC = () => {
   // State for Edit (Adjust) Modal
   const [editingItem, setEditingItem] = useState<Ingredient | null>(null);
   const [editStockValue, setEditStockValue] = useState<string>('');
+  const [newPurchasePrice, setNewPurchasePrice] = useState<string>(''); // For WAC
 
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -53,6 +54,7 @@ export const Inventory: React.FC = () => {
     // Show value in preferred unit (e.g. if stock is 1500g and unit is kg, show 1.5)
     const val = fromBaseUnit(ing.currentStock, ing.unit);
     setEditStockValue(val.toString());
+    setNewPurchasePrice(''); // Reset price
   };
 
   // Handler: Save Edit
@@ -63,13 +65,23 @@ export const Inventory: React.FC = () => {
 
     // Convert back to base unit for storage
     const newStockBase = toBaseUnit(val, editingItem.unit);
-    updateIngredientStock(editingItem.id, newStockBase);
+    
+    // Check if price is provided for WAC
+    const priceVal = newPurchasePrice ? parseFloat(newPurchasePrice) : undefined;
+
+    updateIngredientStock(editingItem.id, newStockBase, priceVal);
     
     setEditingItem(null);
     setEditStockValue('');
+    setNewPurchasePrice('');
   };
 
   const filtered = ingredients.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  // Calculate if we are adding stock (to show price input)
+  const isAddingStock = editingItem && !isNaN(parseFloat(editStockValue)) 
+    ? toBaseUnit(parseFloat(editStockValue), editingItem.unit) > editingItem.currentStock 
+    : false;
 
   return (
     <div className="space-y-6">
@@ -101,7 +113,7 @@ export const Inventory: React.FC = () => {
               <tr>
                 <th className="px-6 py-4">Ingrediente</th>
                 <th className="px-6 py-4">Stock Actual</th>
-                <th className="px-6 py-4">Punto Reposición</th>
+                <th className="px-6 py-4">Costo Prom. Unit</th>
                 <th className="px-6 py-4">Unidad Base</th>
                 <th className="px-6 py-4">Acciones</th>
               </tr>
@@ -116,7 +128,7 @@ export const Inventory: React.FC = () => {
                       {formatStock(ing.currentStock, ing.unit)}
                     </td>
                     <td className="px-6 py-4 text-slate-500">
-                      {formatStock(ing.minStock, ing.unit)}
+                      ${ing.costPerUnit.toFixed(2)} / {ing.unit}
                     </td>
                     <td className="px-6 py-4 text-slate-500 text-sm">
                       {BASE_UNITS[ing.unit]}
@@ -169,7 +181,7 @@ export const Inventory: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                   <label className="block text-sm font-medium text-slate-700 mb-1">Costo Unitario</label>
+                   <label className="block text-sm font-medium text-slate-700 mb-1">Costo Unitario ($)</label>
                    <input 
                     type="number"
                     className="w-full p-2 border border-slate-300 rounded-lg"
@@ -223,15 +235,15 @@ export const Inventory: React.FC = () => {
               <button onClick={() => setEditingItem(null)}><X size={20} /></button>
             </div>
             
-            <div className="p-6">
-              <div className="mb-4 text-center">
+            <div className="p-6 space-y-4">
+              <div className="text-center mb-2">
                 <h4 className="text-lg font-semibold text-slate-800">{editingItem.name}</h4>
                 <p className="text-sm text-slate-500">Actualiza la cantidad física disponible</p>
               </div>
 
-              <div className="mb-6">
+              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Nuevo Stock ({editingItem.unit})
+                  Nuevo Stock Total ({editingItem.unit})
                 </label>
                 <div className="relative">
                   <input 
@@ -248,7 +260,34 @@ export const Inventory: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              {/* Purchase Price Input (Conditional) */}
+              {isAddingStock && (
+                <div className="bg-green-50 p-3 rounded-lg border border-green-100 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-start gap-2 mb-2">
+                     <TrendingUp className="text-green-600 mt-0.5" size={16} />
+                     <label className="block text-sm font-medium text-green-800 leading-tight">
+                       Detectamos una entrada de stock.<br/>
+                       <span className="text-xs font-normal opacity-80">¿A qué precio compraste las nuevas unidades?</span>
+                     </label>
+                  </div>
+                  <div className="relative">
+                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
+                     <input 
+                      type="number"
+                      step="0.01"
+                      placeholder={`Costo por ${editingItem.unit}`}
+                      className="w-full pl-7 pr-3 py-2 border border-green-200 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 text-sm"
+                      value={newPurchasePrice}
+                      onChange={e => setNewPurchasePrice(e.target.value)}
+                    />
+                  </div>
+                  <p className="text-[10px] text-green-700 mt-1">
+                    Esto actualizará el costo promedio ponderado.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3 mt-4">
                 <button 
                   onClick={() => setEditingItem(null)}
                   className="flex-1 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg"

@@ -1,18 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useBakery } from '../context/BakeryContext';
-import { AlertTriangle, TrendingUp, ShoppingBag, Clock, DollarSign, XCircle, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, TrendingUp, ShoppingBag, Clock, DollarSign, XCircle, CheckCircle2, X, ChevronRight } from 'lucide-react';
 import { formatStock } from '../utils/conversions';
+import { STATUS_COLORS } from '../constants';
+
+type DetailViewType = 'pending' | 'today' | 'lowStock' | null;
 
 export const Dashboard: React.FC = () => {
-  const { ingredients, orders } = useBakery();
+  const { ingredients, orders, products } = useBakery();
+  const [viewDetails, setViewDetails] = useState<DetailViewType>(null);
 
   // Low Stock Logic
   const lowStockItems = ingredients.filter(ing => ing.currentStock <= ing.minStock);
 
   // Order Stats
-  const pendingOrders = orders.filter(o => o.status === 'Pendiente').length;
+  const pendingOrdersList = orders.filter(o => o.status === 'Pendiente');
+  const pendingOrdersCount = pendingOrdersList.length;
+
   const today = new Date().toISOString().split('T')[0];
-  const todayOrders = orders.filter(o => o.deliveryDate === today).length;
+  const todayOrdersList = orders.filter(o => o.deliveryDate === today);
+  const todayOrdersCount = todayOrdersList.length;
 
   // Financial Stats
   // 1. Ventas Efectivas: Solo pedidos 'Entregado'
@@ -26,6 +33,84 @@ export const Dashboard: React.FC = () => {
   // Stats calculation
   const totalProcessedValue = totalRevenue + lostRevenue;
   const successRate = totalProcessedValue > 0 ? (totalRevenue / totalProcessedValue) * 100 : 100;
+
+  const renderDetailContent = () => {
+    if (viewDetails === 'lowStock') {
+      return (
+        <div className="space-y-3">
+          {lowStockItems.length === 0 ? (
+            <p className="text-center text-slate-500 py-4">No hay ítems con stock bajo.</p>
+          ) : (
+            lowStockItems.map(item => {
+              const max = item.minStock * 2;
+              const pct = Math.min(100, (item.currentStock / max) * 100);
+              return (
+                <div key={item.id} className="p-3 border border-slate-100 rounded-lg hover:bg-slate-50">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-semibold text-slate-800">{item.name}</span>
+                    <span className="font-bold text-red-600">{formatStock(item.currentStock, item.unit)}</span>
+                  </div>
+                  <div className="text-xs text-slate-500 mb-2">Mínimo: {formatStock(item.minStock, item.unit)}</div>
+                  <div className="w-full bg-slate-100 rounded-full h-1.5">
+                    <div className="bg-red-500 h-1.5 rounded-full" style={{ width: `${Math.max(5, pct)}%` }}></div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      );
+    }
+
+    const orderList = viewDetails === 'pending' ? pendingOrdersList : todayOrdersList;
+    const emptyMsg = viewDetails === 'pending' ? 'No hay pedidos pendientes.' : 'No hay pedidos para hoy.';
+
+    return (
+      <div className="space-y-3">
+        {orderList.length === 0 ? (
+          <p className="text-center text-slate-500 py-4">{emptyMsg}</p>
+        ) : (
+          orderList.map(order => (
+            <div key={order.id} className="p-3 border border-slate-100 rounded-lg hover:bg-slate-50">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h4 className="font-bold text-slate-800">{order.customerName}</h4>
+                  <p className="text-xs text-slate-500 flex items-center gap-1">
+                    <Clock size={12} /> Entrega: {order.deliveryDate}
+                  </p>
+                </div>
+                <span className={`text-[10px] px-2 py-1 rounded-full border ${STATUS_COLORS[order.status]}`}>
+                  {order.status}
+                </span>
+              </div>
+              <ul className="text-sm text-slate-600 space-y-1 mb-2 bg-slate-50 p-2 rounded">
+                {order.items.map((item, idx) => {
+                  const pName = products.find(p => p.id === item.productId)?.name || 'Producto';
+                  return (
+                    <li key={idx} className="flex justify-between">
+                      <span>{item.quantity}x {pName}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="text-right font-bold text-slate-800 text-sm">
+                Total: ${order.totalPrice}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    );
+  };
+
+  const getModalTitle = () => {
+    switch (viewDetails) {
+      case 'pending': return 'Pedidos Pendientes';
+      case 'today': return 'Pedidos Para Hoy';
+      case 'lowStock': return 'Alertas de Stock Bajo';
+      default: return '';
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -75,28 +160,40 @@ export const Dashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Operational KPI Cards */}
+      {/* Operational KPI Cards - Clickable */}
       <div className="grid grid-cols-3 gap-3 md:gap-4">
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center">
-          <div className="p-2 bg-yellow-100 rounded-full text-yellow-600 mb-2"><ShoppingBag size={20} /></div>
-          <span className="text-xs text-slate-500 font-medium">Pendientes</span>
-          <p className="text-xl font-bold text-slate-800">{pendingOrders}</p>
-        </div>
+        <button 
+          onClick={() => setViewDetails('pending')}
+          className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer group"
+        >
+          <div className="p-2 bg-yellow-100 rounded-full text-yellow-600 mb-2 group-hover:scale-110 transition-transform"><ShoppingBag size={20} /></div>
+          <span className="text-xs text-slate-500 font-medium group-hover:text-indigo-600">Pendientes</span>
+          <p className="text-xl font-bold text-slate-800">{pendingOrdersCount}</p>
+          <span className="text-[10px] text-indigo-500 mt-1 opacity-0 group-hover:opacity-100 flex items-center">Ver lista <ChevronRight size={10}/></span>
+        </button>
         
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center">
-          <div className="p-2 bg-blue-100 rounded-full text-blue-600 mb-2"><Clock size={20} /></div>
-          <span className="text-xs text-slate-500 font-medium">Para Hoy</span>
-          <p className="text-xl font-bold text-slate-800">{todayOrders}</p>
-        </div>
+        <button 
+          onClick={() => setViewDetails('today')}
+          className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer group"
+        >
+          <div className="p-2 bg-blue-100 rounded-full text-blue-600 mb-2 group-hover:scale-110 transition-transform"><Clock size={20} /></div>
+          <span className="text-xs text-slate-500 font-medium group-hover:text-indigo-600">Para Hoy</span>
+          <p className="text-xl font-bold text-slate-800">{todayOrdersCount}</p>
+          <span className="text-[10px] text-indigo-500 mt-1 opacity-0 group-hover:opacity-100 flex items-center">Ver lista <ChevronRight size={10}/></span>
+        </button>
 
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center">
-          <div className="p-2 bg-red-100 rounded-full text-red-600 mb-2"><AlertTriangle size={20} /></div>
-          <span className="text-xs text-slate-500 font-medium">Stock Bajo</span>
+        <button 
+          onClick={() => setViewDetails('lowStock')}
+          className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer group"
+        >
+          <div className="p-2 bg-red-100 rounded-full text-red-600 mb-2 group-hover:scale-110 transition-transform"><AlertTriangle size={20} /></div>
+          <span className="text-xs text-slate-500 font-medium group-hover:text-indigo-600">Stock Bajo</span>
           <p className="text-xl font-bold text-slate-800">{lowStockItems.length}</p>
-        </div>
+          <span className="text-[10px] text-indigo-500 mt-1 opacity-0 group-hover:opacity-100 flex items-center">Ver lista <ChevronRight size={10}/></span>
+        </button>
       </div>
 
-      {/* Low Stock Alerts Section */}
+      {/* Low Stock Alerts Section (Inline Preview) */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <h3 className="font-semibold text-slate-800 flex items-center gap-2">
@@ -116,11 +213,10 @@ export const Dashboard: React.FC = () => {
               <p>Todo el inventario está bajo control.</p>
             </div>
           ) : (
-            lowStockItems.map(item => {
-               // Calculate percentage for progress bar
-               const max = item.minStock * 2; // Arbitrary max for visual context
+            // Only show top 5 here to encourage using the detail view if list is long
+            lowStockItems.slice(0, 5).map(item => {
+               const max = item.minStock * 2;
                const pct = Math.min(100, (item.currentStock / max) * 100);
-               
                return (
                 <div key={item.id} className="p-4 hover:bg-slate-50 transition-colors">
                   <div className="flex justify-between items-center mb-2">
@@ -140,8 +236,41 @@ export const Dashboard: React.FC = () => {
                );
             })
           )}
+          {lowStockItems.length > 5 && (
+             <button 
+               onClick={() => setViewDetails('lowStock')}
+               className="w-full py-3 text-sm text-indigo-600 font-medium hover:bg-slate-50"
+             >
+                Ver todos ({lowStockItems.length})
+             </button>
+          )}
         </div>
       </div>
+
+      {/* Detail Modal */}
+      {viewDetails && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-indigo-600 text-white rounded-t-xl">
+              <h3 className="font-bold">{getModalTitle()}</h3>
+              <button onClick={() => setViewDetails(null)} className="hover:bg-white/20 rounded-full p-1"><X size={20} /></button>
+            </div>
+            
+            <div className="p-4 overflow-y-auto">
+              {renderDetailContent()}
+            </div>
+            
+            <div className="p-3 border-t border-slate-100 bg-slate-50 rounded-b-xl">
+              <button 
+                onClick={() => setViewDetails(null)}
+                className="w-full py-2 bg-white border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-100"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
