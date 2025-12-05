@@ -333,22 +333,38 @@ export const Recipes: React.FC = () => {
 
 const ProductCard: React.FC<{ product: Product, ingredients: Ingredient[] }> = ({ product, ingredients }) => {
     const [expanded, setExpanded] = useState(false);
+    const { deleteProduct } = useBakery();
+
+    const handleDelete = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if(window.confirm(`¿Estás seguro que deseas eliminar "${product.name}"? Esta acción no se puede deshacer.`)) {
+            deleteProduct(product.id);
+        }
+    };
+
     return (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
             <div 
                 className="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50"
                 onClick={() => setExpanded(!expanded)}
             >
-                <div>
+                <div className="flex-1">
                     <h3 className="font-bold text-slate-800 text-lg">{product.name}</h3>
                     <p className="text-slate-500 text-sm flex items-center gap-2">
                         {product.recipe.length} ingredientes
                     </p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                     <span className="font-bold text-emerald-600 text-lg bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">
                         ${product.price}
                     </span>
+                    <button 
+                        onClick={handleDelete}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                        title="Eliminar receta"
+                    >
+                        <Trash2 size={18} />
+                    </button>
                     {expanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
                 </div>
             </div>

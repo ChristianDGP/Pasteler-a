@@ -60,6 +60,7 @@ interface BakeryContextType {
   addIngredient: (ing: Ingredient) => void;
   updateIngredientStock: (id: string, newAmount: number, newUnitCost?: number) => void;
   addProduct: (prod: Product) => void;
+  deleteProduct: (id: string) => void;
   addOrder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   deleteOrder: (orderId: string) => void;
@@ -116,6 +117,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const addProduct = (prod: Product) => setProducts(prev => [...prev, prod]);
+
+  const deleteProduct = (id: string) => setProducts(prev => prev.filter(p => p.id !== id));
   
   const addOrder = (order: Order) => setOrders(prev => [order, ...prev]);
 
@@ -182,6 +185,7 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       addIngredient,
       updateIngredientStock,
       addProduct,
+      deleteProduct,
       addOrder,
       updateOrderStatus,
       deleteOrder
