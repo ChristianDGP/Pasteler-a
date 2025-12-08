@@ -33,6 +33,16 @@ export interface Product {
   recipe: RecipeItem[];
 }
 
+// Entity: Cliente
+export interface Customer {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+}
+
 // Entity: Pedido (Order)
 export interface OrderItem {
   productId: string;
@@ -43,7 +53,8 @@ export type OrderStatus = 'Pendiente' | 'En Proceso' | 'Completado' | 'Entregado
 
 export interface Order {
   id: string;
-  customerName: string;
+  customerId: string; // Link to Customer ID if available
+  customerName: string; // Fallback or snapshot name
   deliveryDate: string; // ISO Date string YYYY-MM-DD
   status: OrderStatus;
   items: OrderItem[];

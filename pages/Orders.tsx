@@ -2,14 +2,17 @@ import React, { useState } from 'react';
 import { useBakery } from '../context/BakeryContext';
 import { Order, OrderStatus } from '../types';
 import { STATUS_COLORS } from '../constants';
-import { Plus, X, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Plus, X, Clock, AlertCircle, User } from 'lucide-react';
 
 export const Orders: React.FC = () => {
-  const { orders, products, addOrder, updateOrderStatus } = useBakery();
+  const { orders, products, customers, addOrder, updateOrderStatus } = useBakery();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // New Order State
-  const [customer, setCustomer] = useState('');
+  const [customerId, setCustomerId] = useState('');
+  const [customerNameInput, setCustomerNameInput] = useState(''); // For new/manual customers
+  const [isExistingCustomer, setIsExistingCustomer] = useState(true);
+
   const [date, setDate] = useState('');
   const [selectedProduct, setSelectedProduct] = useState('');
   const [qty, setQty] = useState(1);
@@ -23,7 +26,7 @@ export const Orders: React.FC = () => {
     setCart([...cart, { productId: selectedProduct, quantity: qty }]);
     setSelectedProduct('');
     setQty(1);
-    setError(''); // Clear error when user takes action
+    setError('');
   };
   
   const removeFromCart = (index: number) => {
@@ -33,11 +36,28 @@ export const Orders: React.FC = () => {
   const handleCreateOrder = () => {
     setError('');
     
-    // Validations
-    if(!customer.trim()) {
-      setError('Por favor ingresa el nombre del cliente.');
-      return;
+    // Customer Validation
+    let finalCustomerName = '';
+    let finalCustomerId = '';
+
+    if (isExistingCustomer) {
+        if (!customerId) {
+            setError('Por favor selecciona un cliente de la lista.');
+            return;
+        }
+        const c = customers.find(c => c.id === customerId);
+        finalCustomerName = c ? c.name : 'Cliente';
+        finalCustomerId = customerId;
+    } else {
+        if (!customerNameInput.trim()) {
+            setError('Por favor ingresa el nombre del cliente.');
+            return;
+        }
+        finalCustomerName = customerNameInput;
+        // In a more complex app, we might create the customer here automatically.
+        finalCustomerId = 'temp_' + Date.now(); 
     }
+
     if(!date) {
       setError('Por favor selecciona una fecha de entrega.');
       return;
@@ -56,7 +76,8 @@ export const Orders: React.FC = () => {
 
     const newOrder: Order = {
       id: Date.now().toString(),
-      customerName: customer,
+      customerId: finalCustomerId,
+      customerName: finalCustomerName,
       deliveryDate: date,
       status: 'Pendiente',
       items: cart,
@@ -70,7 +91,9 @@ export const Orders: React.FC = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setCart([]);
-    setCustomer('');
+    setCustomerId('');
+    setCustomerNameInput('');
+    setIsExistingCustomer(true);
     setDate('');
     setError('');
     setSelectedProduct('');
@@ -97,20 +120,23 @@ export const Orders: React.FC = () => {
           <div key={order.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between gap-4">
             <div className="flex-1">
               <div className="flex justify-between items-start">
-                 <h3 className={`font-bold text-lg ${order.status === 'Cancelado' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
-                    {order.customerName}
-                 </h3>
+                 <div className="flex items-center gap-2">
+                    <User size={16} className="text-indigo-500" />
+                    <h3 className={`font-bold text-lg ${order.status === 'Cancelado' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                        {order.customerName}
+                    </h3>
+                 </div>
                  <span className="text-sm text-slate-500 flex items-center gap-1">
                     <Clock size={14} /> {order.deliveryDate}
                  </span>
               </div>
-              <ul className="mt-2 text-sm text-slate-600 space-y-1">
+              <ul className="mt-2 text-sm text-slate-600 space-y-1 ml-6">
                 {order.items.map((item, idx) => {
                   const pName = products.find(p => p.id === item.productId)?.name;
                   return <li key={idx} className="flex gap-2"><span>{item.quantity}x</span> <span>{pName}</span></li>
                 })}
               </ul>
-              <div className="mt-2 font-bold text-slate-800">Total: ${order.totalPrice}</div>
+              <div className="mt-2 ml-6 font-bold text-slate-800">Total: ${order.totalPrice}</div>
             </div>
 
             <div className="flex flex-col gap-2 justify-center border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-4 min-w-[200px]">
@@ -141,15 +167,44 @@ export const Orders: React.FC = () => {
               <button onClick={closeModal}><X size={20} /></button>
             </div>
             <div className="p-6 space-y-4">
+               
+               {/* Customer Selection Logic */}
                <div>
-                  <label className="block text-sm font-medium text-slate-700">Cliente</label>
-                  <input 
-                    className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none" 
-                    value={customer} 
-                    onChange={e => setCustomer(e.target.value)} 
-                    placeholder="Nombre del cliente"
-                  />
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Cliente</label>
+                  <div className="flex gap-2 mb-2 text-sm">
+                      <button 
+                        onClick={() => setIsExistingCustomer(true)}
+                        className={`flex-1 py-1 rounded ${isExistingCustomer ? 'bg-indigo-100 text-indigo-700 font-bold' : 'bg-slate-100 text-slate-600'}`}
+                      >
+                        Seleccionar
+                      </button>
+                      <button 
+                        onClick={() => setIsExistingCustomer(false)}
+                        className={`flex-1 py-1 rounded ${!isExistingCustomer ? 'bg-indigo-100 text-indigo-700 font-bold' : 'bg-slate-100 text-slate-600'}`}
+                      >
+                        Nuevo / Casual
+                      </button>
+                  </div>
+                  
+                  {isExistingCustomer ? (
+                      <select 
+                        className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none"
+                        value={customerId}
+                        onChange={e => setCustomerId(e.target.value)}
+                      >
+                          <option value="">-- Buscar Cliente --</option>
+                          {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                  ) : (
+                      <input 
+                        className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none" 
+                        value={customerNameInput} 
+                        onChange={e => setCustomerNameInput(e.target.value)} 
+                        placeholder="Nombre del cliente"
+                      />
+                  )}
                </div>
+
                <div>
                   <label className="block text-sm font-medium text-slate-700">Fecha de Entrega</label>
                   <input 

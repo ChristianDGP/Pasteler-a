@@ -6,6 +6,8 @@ import { Inventory } from './pages/Inventory';
 import { Recipes } from './pages/Recipes';
 import { Orders } from './pages/Orders';
 import { Production } from './pages/Production';
+import { Customers } from './pages/Customers';
+import { Reports } from './pages/Reports';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -17,6 +19,8 @@ const App: React.FC = () => {
       case 'recipes': return <Recipes />;
       case 'orders': return <Orders />;
       case 'production': return <Production />;
+      case 'customers': return <Customers />;
+      case 'reports': return <Reports />;
       default: return <Dashboard />;
     }
   };

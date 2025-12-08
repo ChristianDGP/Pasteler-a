@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Ingredient, Product, Order, OrderStatus, UnitType } from '../types';
+import { Ingredient, Product, Order, OrderStatus, UnitType, Customer } from '../types';
 import { toBaseUnit, fromBaseUnit } from '../utils/conversions';
 
-// Initial Mock Data to populate the app
+// Initial Mock Data (Used only if LocalStorage is empty)
 const INITIAL_INGREDIENTS: Ingredient[] = [
   { id: '1', name: 'Harina 0000', currentStock: 50000, unit: UnitType.KILOGRAMS, costPerUnit: 1.5, minStock: 10000 },
   { id: '2', name: 'Azúcar Blanca', currentStock: 8000, unit: UnitType.KILOGRAMS, costPerUnit: 2, minStock: 10000 },
@@ -39,9 +39,15 @@ const INITIAL_PRODUCTS: Product[] = [
   }
 ];
 
+const INITIAL_CUSTOMERS: Customer[] = [
+  { id: 'c1', name: 'Juan Pérez', phone: '555-0101', email: 'juan@example.com', address: 'Calle Falsa 123' },
+  { id: 'c2', name: 'Maria Gomez', phone: '555-0202', address: 'Av. Libertador 400' }
+];
+
 const INITIAL_ORDERS: Order[] = [
   {
     id: 'o1',
+    customerId: 'c1',
     customerName: 'Juan Pérez',
     deliveryDate: new Date().toISOString().split('T')[0], // Today
     status: 'Pendiente',
@@ -57,52 +63,67 @@ interface BakeryContextType {
   ingredients: Ingredient[];
   products: Product[];
   orders: Order[];
+  customers: Customer[];
+  
   addIngredient: (ing: Ingredient) => void;
   updateIngredientStock: (id: string, newAmount: number, newUnitCost?: number) => void;
+  
   addProduct: (prod: Product) => void;
   deleteProduct: (id: string) => void;
+  
   addOrder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   deleteOrder: (orderId: string) => void;
+
+  addCustomer: (customer: Customer) => void;
+  updateCustomer: (customer: Customer) => void;
+  deleteCustomer: (id: string) => void;
 }
 
 const BakeryContext = createContext<BakeryContextType | undefined>(undefined);
 
-export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // In a real app, these would come from an API/DB
-  const [ingredients, setIngredients] = useState<Ingredient[]>(INITIAL_INGREDIENTS);
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+// Helper to load from LocalStorage
+const loadFromStorage = <T,>(key: string, fallback: T): T => {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : fallback;
+  } catch (e) {
+    console.error(`Error loading key ${key}`, e);
+    return fallback;
+  }
+};
 
+export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Initialize state from LocalStorage or Fallback
+  const [ingredients, setIngredients] = useState<Ingredient[]>(() => loadFromStorage('bakery_ingredients', INITIAL_INGREDIENTS));
+  const [products, setProducts] = useState<Product[]>(() => loadFromStorage('bakery_products', INITIAL_PRODUCTS));
+  const [orders, setOrders] = useState<Order[]>(() => loadFromStorage('bakery_orders', INITIAL_ORDERS));
+  const [customers, setCustomers] = useState<Customer[]>(() => loadFromStorage('bakery_customers', INITIAL_CUSTOMERS));
+
+  // Persistence Effects
+  useEffect(() => { localStorage.setItem('bakery_ingredients', JSON.stringify(ingredients)); }, [ingredients]);
+  useEffect(() => { localStorage.setItem('bakery_products', JSON.stringify(products)); }, [products]);
+  useEffect(() => { localStorage.setItem('bakery_orders', JSON.stringify(orders)); }, [orders]);
+  useEffect(() => { localStorage.setItem('bakery_customers', JSON.stringify(customers)); }, [customers]);
+
+  /* --- INGREDIENTS --- */
   const addIngredient = (ing: Ingredient) => setIngredients(prev => [...prev, ing]);
   
-  /**
-   * Updates stock and calculates Weighted Average Cost (Precio Medio Ponderado)
-   * @param id Ingredient ID
-   * @param newAmount The Total New Stock Level (in base units)
-   * @param newUnitCost (Optional) The price paid per DISPLAY unit for the ADDED stock.
-   */
   const updateIngredientStock = (id: string, newAmount: number, newUnitCost?: number) => {
     setIngredients(prev => prev.map(ing => {
       if (ing.id !== id) return ing;
 
       // Weighted Average Cost Logic
-      // Only apply if stock is increasing and a cost was provided
       if (newAmount > ing.currentStock && newUnitCost !== undefined && newUnitCost > 0) {
         const addedAmountBase = newAmount - ing.currentStock;
-        
-        // Convert amounts to Display Unit for cost calculation
         const currentStockDisplay = fromBaseUnit(ing.currentStock, ing.unit);
         const addedAmountDisplay = fromBaseUnit(addedAmountBase, ing.unit);
         const newTotalDisplay = fromBaseUnit(newAmount, ing.unit);
 
-        // Value of existing stock
         const oldValue = currentStockDisplay * ing.costPerUnit;
-        // Value of new purchase
         const newValue = addedAmountDisplay * newUnitCost;
         
-        // New Weighted Average
-        const newAverageCost = (oldValue + newValue) / newTotalDisplay;
+        const newAverageCost = newTotalDisplay > 0 ? (oldValue + newValue) / newTotalDisplay : ing.costPerUnit;
         
         return { 
           ...ing, 
@@ -110,26 +131,23 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           costPerUnit: parseFloat(newAverageCost.toFixed(2))
         };
       }
-
-      // If just correcting stock or reducing, or no price provided, keep old cost
       return { ...ing, currentStock: newAmount };
     }));
   };
 
+  /* --- PRODUCTS --- */
   const addProduct = (prod: Product) => setProducts(prev => [...prev, prod]);
-
   const deleteProduct = (id: string) => setProducts(prev => prev.filter(p => p.id !== id));
   
-  const addOrder = (order: Order) => setOrders(prev => [order, ...prev]);
+  /* --- CUSTOMERS --- */
+  const addCustomer = (customer: Customer) => setCustomers(prev => [...prev, customer]);
+  const updateCustomer = (updated: Customer) => setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
+  const deleteCustomer = (id: string) => setCustomers(prev => prev.filter(c => c.id !== id));
 
+  /* --- ORDERS --- */
+  const addOrder = (order: Order) => setOrders(prev => [order, ...prev]);
   const deleteOrder = (id: string) => setOrders(prev => prev.filter(o => o.id !== id));
 
-  /**
-   * CRITICAL LOGIC: Automatic Stock Deduction
-   * When order becomes 'Completado', reduce stock.
-   * If it goes back to 'Pendiente' (e.g. mistake), restore stock? 
-   * For simplicity in this demo, we only deduct on 'Completado' transition.
-   */
   const updateOrderStatus = useCallback((orderId: string, newStatus: OrderStatus) => {
     setOrders(prevOrders => {
       const orderIndex = prevOrders.findIndex(o => o.id === orderId);
@@ -138,21 +156,19 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const order = prevOrders[orderIndex];
       const oldStatus = order.status;
 
-      // Logic: If moving TO 'Completado' FROM a non-completed status, deduct stock.
+      // Deduct stock only when moving TO Completed from a non-completed state
       if (newStatus === 'Completado' && oldStatus !== 'Completado') {
         deductStockForOrder(order);
       }
 
-      // Create new orders array
       const updatedOrders = [...prevOrders];
       updatedOrders[orderIndex] = { ...order, status: newStatus };
       return updatedOrders;
     });
-  }, [products]); // Dependency on products to know recipes
+  }, [products]); 
 
   const deductStockForOrder = (order: Order) => {
-    // We need to calculate total usage for this order
-    const usageMap = new Map<string, number>(); // ingredientId -> amount to deduct (base units)
+    const usageMap = new Map<string, number>(); 
 
     order.items.forEach(item => {
       const product = products.find(p => p.id === item.productId);
@@ -167,7 +183,6 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
     });
 
-    // Apply updates to ingredients state
     setIngredients(prevIngredients => prevIngredients.map(ing => {
       const deduction = usageMap.get(ing.id);
       if (deduction) {
@@ -182,13 +197,17 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       ingredients,
       products,
       orders,
+      customers,
       addIngredient,
       updateIngredientStock,
       addProduct,
       deleteProduct,
       addOrder,
       updateOrderStatus,
-      deleteOrder
+      deleteOrder,
+      addCustomer,
+      updateCustomer,
+      deleteCustomer
     }}>
       {children}
     </BakeryContext.Provider>
