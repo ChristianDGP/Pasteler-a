@@ -28,7 +28,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-200 h-full">
         <div className="p-6 border-b border-slate-100">
           <h1 className="text-2xl font-bold text-slate-800">Pastelería<span className="text-indigo-600">PRO</span></h1>
-          <p className="text-xs text-slate-500 mt-1">Gestión Integral v1.1</p>
+          <p className="text-xs text-slate-500 mt-1">Gestión Integral v1.2</p>
         </div>
         <nav className="flex-1 overflow-y-auto py-4">
           <div className="px-6 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Operativo</div>
