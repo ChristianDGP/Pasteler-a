@@ -3,10 +3,10 @@ import { useBakery } from '../context/BakeryContext';
 import { Ingredient, UnitType } from '../types';
 import { UNIT_OPTIONS, BASE_UNITS } from '../constants';
 import { formatStock, toBaseUnit, fromBaseUnit } from '../utils/conversions';
-import { Plus, Search, Edit2, Save, X, RefreshCw, TrendingUp } from 'lucide-react';
+import { Plus, Search, Edit2, Save, X, RefreshCw, TrendingUp, Trash2 } from 'lucide-react';
 
 export const Inventory: React.FC = () => {
-  const { ingredients, addIngredient, updateIngredientStock } = useBakery();
+  const { ingredients, addIngredient, updateIngredientStock, deleteIngredient } = useBakery();
   
   // State for Create Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -55,6 +55,13 @@ export const Inventory: React.FC = () => {
     const val = fromBaseUnit(ing.currentStock, ing.unit);
     setEditStockValue(val.toString());
     setNewPurchasePrice(''); // Reset price
+  };
+
+  // Handler: Delete
+  const handleDelete = (id: string, name: string) => {
+    if (window.confirm(`¿Estás seguro que deseas eliminar "${name}" del inventario? Esto podría afectar las recetas que lo utilizan.`)) {
+      deleteIngredient(id);
+    }
   };
 
   // Handler: Save Edit
@@ -115,7 +122,7 @@ export const Inventory: React.FC = () => {
                 <th className="px-6 py-4">Stock Actual</th>
                 <th className="px-6 py-4">Costo Prom. Unit</th>
                 <th className="px-6 py-4">Unidad Base</th>
-                <th className="px-6 py-4">Acciones</th>
+                <th className="px-6 py-4 text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -134,12 +141,22 @@ export const Inventory: React.FC = () => {
                       {BASE_UNITS[ing.unit]}
                     </td>
                     <td className="px-6 py-4">
-                      <button 
-                        onClick={() => handleEditClick(ing)}
-                        className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center gap-1"
-                      >
-                        <Edit2 size={16} /> Ajustar
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        <button 
+                          onClick={() => handleEditClick(ing)}
+                          className="text-indigo-600 hover:text-indigo-800 p-2 rounded hover:bg-indigo-50 transition-colors"
+                          title="Ajustar Stock"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(ing.id, ing.name)}
+                          className="text-red-400 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors"
+                          title="Eliminar Ingrediente"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
