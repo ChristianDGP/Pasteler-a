@@ -69,13 +69,23 @@ export const Customers: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h2 className="text-2xl font-bold text-slate-800">Clientes</h2>
+        {/* Desktop Button */}
         <button 
           onClick={handleAdd}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 shadow-sm"
+          className="hidden md:flex bg-indigo-600 text-white px-4 py-2 rounded-lg items-center gap-2 hover:bg-indigo-700 shadow-sm"
         >
           <Plus size={18} /> Nuevo Cliente
         </button>
       </div>
+
+      {/* Mobile Floating Action Button (FAB) */}
+      <button 
+        onClick={handleAdd}
+        className="md:hidden fixed bottom-20 right-4 bg-indigo-600 text-white p-4 rounded-full shadow-lg z-40 hover:bg-indigo-700 transition-colors"
+        aria-label="Nuevo Cliente"
+      >
+        <Plus size={24} />
+      </button>
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />

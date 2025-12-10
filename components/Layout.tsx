@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Package, ChefHat, ShoppingCart, CalendarDays, Users, FileText } from 'lucide-react';
+import { LayoutDashboard, Package, ChefHat, ShoppingCart, CalendarDays, Users, FileText, Database } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -41,6 +41,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
           <div className="mt-4 px-6 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Gestión</div>
           <NavItem id="customers" label="Clientes" icon={Users} active={activeTab === 'customers'} onClick={onTabChange} />
           <NavItem id="reports" label="Reportes" icon={FileText} active={activeTab === 'reports'} onClick={onTabChange} />
+          <NavItem id="database" label="Base de Datos" icon={Database} active={activeTab === 'database'} onClick={onTabChange} />
         </nav>
       </aside>
 
@@ -61,6 +62,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
            <NavItem id="recipes" label="Recetas" icon={ChefHat} active={activeTab === 'recipes'} onClick={onTabChange} />
            <NavItem id="customers" label="Clientes" icon={Users} active={activeTab === 'customers'} onClick={onTabChange} />
            <NavItem id="reports" label="Reportes" icon={FileText} active={activeTab === 'reports'} onClick={onTabChange} />
+           <NavItem id="database" label="BD" icon={Database} active={activeTab === 'database'} onClick={onTabChange} />
         </div>
       </nav>
     </div>

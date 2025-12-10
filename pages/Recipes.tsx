@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useBakery } from '../context/BakeryContext';
 import { Product, RecipeItem, UnitType, Ingredient } from '../types';
 import { UNIT_OPTIONS } from '../constants';
-import { Plus, Trash2, ChevronDown, ChevronUp, Calculator, DollarSign, ArrowRight, Edit2, Save } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Calculator, DollarSign, ArrowRight, Edit2, Save, X } from 'lucide-react';
 import { formatStock, fromBaseUnit, formatCurrency } from '../utils/conversions';
 
 export const Recipes: React.FC = () => {
@@ -25,19 +25,6 @@ export const Recipes: React.FC = () => {
   const [selectedIngId, setSelectedIngId] = useState('');
   const [amount, setAmount] = useState<number | ''>('');
   const [selectedUnit, setSelectedUnit] = useState<UnitType>(UnitType.GRAMS);
-
-  // Helper to filter units based on ingredient type (Mass vs Volume vs Units)
-  const getCompatibleUnits = (ingUnit?: UnitType) => {
-    if (!ingUnit) return UNIT_OPTIONS;
-    
-    const massUnits = [UnitType.GRAMS, UnitType.KILOGRAMS];
-    const volUnits = [UnitType.MILLILITERS, UnitType.LITERS];
-
-    if (massUnits.includes(ingUnit)) return UNIT_OPTIONS.filter(u => massUnits.includes(u.value));
-    if (volUnits.includes(ingUnit)) return UNIT_OPTIONS.filter(u => volUnits.includes(u.value));
-    
-    return UNIT_OPTIONS.filter(u => u.value === UnitType.UNITS);
-  };
 
   const handleAddIngredient = () => {
     if(!selectedIngId || !amount || Number(amount) <= 0) return;
@@ -172,24 +159,36 @@ export const Recipes: React.FC = () => {
 
   const suggestedPrice = calculateSuggestedPrice();
 
+  const toggleCreate = () => {
+    if(isCreating) {
+        closeForm();
+    } else {
+        resetForm();
+        setIsCreating(true);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-800">Recetas y Productos</h2>
+        {/* Desktop Button */}
         <button 
-          onClick={() => {
-              if(isCreating) {
-                  closeForm();
-              } else {
-                  resetForm();
-                  setIsCreating(true);
-              }
-          }}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 shadow-sm"
+          onClick={toggleCreate}
+          className="hidden md:flex bg-indigo-600 text-white px-4 py-2 rounded-lg items-center gap-2 hover:bg-indigo-700 shadow-sm"
         >
           {isCreating ? 'Cancelar' : <><Plus size={18} /> Nuevo Producto</>}
         </button>
       </div>
+
+      {/* Mobile Floating Action Button (FAB) */}
+      <button 
+        onClick={toggleCreate}
+        className={`md:hidden fixed bottom-20 right-4 p-4 rounded-full shadow-lg z-40 transition-colors ${isCreating ? 'bg-slate-500 hover:bg-slate-600' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}
+        aria-label={isCreating ? "Cancelar" : "Nuevo Producto"}
+      >
+        {isCreating ? <X size={24} /> : <Plus size={24} />}
+      </button>
 
       {isCreating && (
         <div className="bg-white p-6 rounded-xl border border-indigo-100 shadow-lg space-y-6 animate-in fade-in slide-in-from-top-4">
@@ -212,46 +211,51 @@ export const Recipes: React.FC = () => {
                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                     <h4 className="font-medium text-slate-700 mb-3 text-sm uppercase tracking-wide">Ingredientes (Costo Variable)</h4>
                     
-                    <div className="flex flex-col gap-2 mb-4 bg-white p-3 rounded border border-slate-200">
+                    <div className="flex flex-col gap-2 mb-4 bg-white p-3 rounded border border-slate-200 shadow-sm">
                       <label className="text-xs font-bold text-slate-500">Agregar Ingrediente</label>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                          <select 
-                            className="flex-1 p-2 border rounded text-sm outline-none focus:border-indigo-500"
-                            value={selectedIngId}
-                            onChange={e => {
-                              const ing = ingredients.find(i => i.id === e.target.value);
-                              setSelectedIngId(e.target.value);
-                              if(ing) setSelectedUnit(ing.unit);
-                            }}
-                          >
-                            <option value="">-- Seleccionar --</option>
-                            {ingredients.map(i => <option key={i.id} value={i.id}>{i.name} ({formatCurrency(i.costPerUnit)}/{i.unit})</option>)}
-                          </select>
+                      <div className="grid grid-cols-12 gap-2 items-end">
+                          <div className="col-span-12 sm:col-span-5">
+                            <select 
+                                className="w-full p-2 border rounded text-sm outline-none focus:border-indigo-500 bg-white"
+                                value={selectedIngId}
+                                onChange={e => {
+                                const ing = ingredients.find(i => i.id === e.target.value);
+                                setSelectedIngId(e.target.value);
+                                if(ing) setSelectedUnit(ing.unit);
+                                }}
+                            >
+                                <option value="">-- Seleccionar --</option>
+                                {ingredients.map(i => <option key={i.id} value={i.id}>{i.name} ({formatCurrency(i.costPerUnit)}/{i.unit})</option>)}
+                            </select>
+                          </div>
                           
-                          <div className="flex gap-2">
+                          <div className="col-span-4 sm:col-span-3">
                               <input 
                                 type="number" 
-                                className="w-20 p-2 border rounded text-sm" 
+                                className="w-full p-2 border rounded text-sm outline-none focus:border-indigo-500" 
                                 placeholder="Cant."
                                 value={amount}
                                 onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
                               />
-                              
+                          </div>
+                          
+                          <div className="col-span-6 sm:col-span-3">
                               <select 
-                                className="w-32 p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
                                 value={selectedUnit}
                                 onChange={e => setSelectedUnit(e.target.value as UnitType)}
-                                disabled={!selectedIngId}
                               >
-                                {getCompatibleUnits(ingredients.find(i => i.id === selectedIngId)?.unit).map(u => (
+                                {UNIT_OPTIONS.map(u => (
                                   <option key={u.value} value={u.value}>{u.label}</option>
                                 ))}
                               </select>
-                              
+                          </div>
+                          
+                          <div className="col-span-2 sm:col-span-1">
                               <button 
                                 onClick={handleAddIngredient}
                                 disabled={!selectedIngId}
-                                className="bg-indigo-600 text-white px-3 py-2 rounded hover:bg-indigo-700 disabled:bg-slate-300 flex items-center justify-center"
+                                className="w-full bg-indigo-600 text-white p-2 rounded hover:bg-indigo-700 disabled:bg-slate-300 flex items-center justify-center transition-colors h-[38px]"
                               >
                                 <Plus size={18} />
                               </button>

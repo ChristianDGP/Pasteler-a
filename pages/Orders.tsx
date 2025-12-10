@@ -108,13 +108,24 @@ export const Orders: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-800">Pedidos</h2>
+        
+        {/* Desktop Button */}
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 shadow-sm"
+          className="hidden md:flex bg-indigo-600 text-white px-4 py-2 rounded-lg items-center gap-2 hover:bg-indigo-700 shadow-sm"
         >
           <Plus size={18} /> Nuevo Pedido
         </button>
       </div>
+
+      {/* Mobile Floating Action Button (FAB) */}
+      <button 
+        onClick={() => setIsModalOpen(true)}
+        className="md:hidden fixed bottom-20 right-4 bg-indigo-600 text-white p-4 rounded-full shadow-lg z-40 hover:bg-indigo-700 transition-colors"
+        aria-label="Nuevo Pedido"
+      >
+        <Plus size={24} />
+      </button>
 
       <div className="grid gap-4">
         {orders.length === 0 && <p className="text-center text-slate-400 py-10">No hay pedidos registrados.</p>}

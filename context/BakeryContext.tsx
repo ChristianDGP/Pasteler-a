@@ -81,6 +81,8 @@ interface BakeryContextType {
   addCustomer: (customer: Customer) => void;
   updateCustomer: (customer: Customer) => void;
   deleteCustomer: (id: string) => void;
+
+  restoreDatabase: (data: any) => void;
 }
 
 const BakeryContext = createContext<BakeryContextType | undefined>(undefined);
@@ -200,6 +202,14 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }));
   };
 
+  /* --- DATABASE RESTORE --- */
+  const restoreDatabase = (data: any) => {
+    if (data.ingredients) setIngredients(data.ingredients);
+    if (data.products) setProducts(data.products);
+    if (data.orders) setOrders(data.orders);
+    if (data.customers) setCustomers(data.customers);
+  };
+
   return (
     <BakeryContext.Provider value={{
       ingredients,
@@ -217,7 +227,8 @@ export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       deleteOrder,
       addCustomer,
       updateCustomer,
-      deleteCustomer
+      deleteCustomer,
+      restoreDatabase
     }}>
       {children}
     </BakeryContext.Provider>
