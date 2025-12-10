@@ -26,13 +26,21 @@ export const Recipes: React.FC = () => {
   const [amount, setAmount] = useState<number | ''>('');
   const [selectedUnit, setSelectedUnit] = useState<UnitType>(UnitType.GRAMS);
 
+  // Helper to filter units based on ingredient type (Mass vs Volume vs Units)
+  const getCompatibleUnits = (ingUnit?: UnitType) => {
+    if (!ingUnit) return UNIT_OPTIONS;
+    
+    const massUnits = [UnitType.GRAMS, UnitType.KILOGRAMS];
+    const volUnits = [UnitType.MILLILITERS, UnitType.LITERS];
+
+    if (massUnits.includes(ingUnit)) return UNIT_OPTIONS.filter(u => massUnits.includes(u.value));
+    if (volUnits.includes(ingUnit)) return UNIT_OPTIONS.filter(u => volUnits.includes(u.value));
+    
+    return UNIT_OPTIONS.filter(u => u.value === UnitType.UNITS);
+  };
+
   const handleAddIngredient = () => {
     if(!selectedIngId || !amount || Number(amount) <= 0) return;
-    
-    // Check if ingredient already exists in the list to avoid duplicates (optional, but good practice)
-    // If it exists, we could just add to the quantity, but here we'll append for simplicity or warn? 
-    // Let's allow adding it as a separate line, or user can edit the existing one.
-    // Better UX: If exists, update quantity? No, let's keep it simple: Add to list.
     
     setRecipeItems([...recipeItems, {
       ingredientId: selectedIngId,
@@ -230,12 +238,14 @@ export const Recipes: React.FC = () => {
                               />
                               
                               <select 
-                                className="w-24 p-2 border rounded text-sm bg-slate-100"
+                                className="w-32 p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
                                 value={selectedUnit}
                                 onChange={e => setSelectedUnit(e.target.value as UnitType)}
-                                disabled // Keep unit fixed to ingredient default to avoid complexity for now, or enable if needed
+                                disabled={!selectedIngId}
                               >
-                                {UNIT_OPTIONS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+                                {getCompatibleUnits(ingredients.find(i => i.id === selectedIngId)?.unit).map(u => (
+                                  <option key={u.value} value={u.value}>{u.label}</option>
+                                ))}
                               </select>
                               
                               <button 
