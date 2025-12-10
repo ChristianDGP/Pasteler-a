@@ -67,31 +67,12 @@ export const Recipes: React.FC = () => {
       // Cost is stored per ing.unit (Display unit).
       // We need to match item.quantity (item.unit) to ing.unit.
       
-      // Simple conversion: convert item qty to base, then to ing.unit
-      // But ing.currentStock is base, ing.costPerUnit is PER DISPLAY UNIT.
-      
-      // Example: Recipe needs 500g. Ing Unit is kg. Cost is $2/kg.
-      // 500g = 0.5kg. Cost = 0.5 * 2 = 1.
-      
-      // Let's rely on base units to be safe, but costPerUnit is per Display Unit.
-      // So CostPerBase = CostPerUnit / BaseFactor(Unit).
-      // Easier: Convert Item Quantity to Ing Unit.
-      
-      // NOTE: For this demo, let's assume we use fromBaseUnit helper properly if needed,
-      // but let's implement a direct conversion for cost estimation.
-      
       // Case 1: Same unit
       if (item.unit === ing.unit) {
           return acc + (item.quantity * ing.costPerUnit);
       }
       
       // Case 2: Different units (e.g. g vs kg)
-      // Convert item quantity to Ing Unit
-      // e.g. Item 500g -> Ing kg. 500g is 500 Base. 1kg is 1000 Base.
-      // We need to know the factor. 
-      // Simplest: Convert Item Qty -> Base -> Ing Unit.
-      // However, toBaseUnit returns base. fromBaseUnit takes base and gives target.
-      // This works!
       
       // 1. Get Base Quantity of Item
       let itemBase = 0;
@@ -178,7 +159,7 @@ export const Recipes: React.FC = () => {
                             className="w-20 p-2 border rounded text-sm" 
                             placeholder="Cant."
                             value={amount}
-                            onChange={e => setAmount(Number(e.target.value))}
+                            onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
                           />
                           
                           <select 
@@ -243,7 +224,7 @@ export const Recipes: React.FC = () => {
                                  className="w-full pl-5 p-2 border border-indigo-200 rounded text-sm focus:ring-1 focus:ring-indigo-500"
                                  placeholder="0.00"
                                  value={fixedCosts}
-                                 onChange={e => setFixedCosts(Number(e.target.value))}
+                                 onChange={e => setFixedCosts(e.target.value === '' ? '' : Number(e.target.value))}
                                />
                            </div>
                         </div>
@@ -254,7 +235,7 @@ export const Recipes: React.FC = () => {
                              className="w-full p-2 border border-indigo-200 rounded text-sm focus:ring-1 focus:ring-indigo-500"
                              placeholder="Unidades/mes"
                              value={estimatedUnits}
-                             onChange={e => setEstimatedUnits(Number(e.target.value))}
+                             onChange={e => setEstimatedUnits(e.target.value === '' ? '' : Number(e.target.value))}
                            />
                         </div>
                       </div>
@@ -301,7 +282,7 @@ export const Recipes: React.FC = () => {
                             type="number" 
                             className="w-full pl-9 p-3 border border-slate-300 rounded-lg text-lg font-bold text-slate-800" 
                             value={productPrice} 
-                            onChange={e => setProductPrice(Number(e.target.value))} 
+                            onChange={e => setProductPrice(e.target.value === '' ? '' : Number(e.target.value))} 
                             placeholder="0.00"
                         />
                     </div>

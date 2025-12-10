@@ -5,6 +5,15 @@ import { UNIT_OPTIONS, BASE_UNITS } from '../constants';
 import { formatStock, toBaseUnit, fromBaseUnit } from '../utils/conversions';
 import { Plus, Search, Edit2, Save, X, RefreshCw, TrendingUp, Trash2 } from 'lucide-react';
 
+// Local interface to handle form inputs allowing empty strings
+interface IngredientForm {
+  name: string;
+  unit: UnitType;
+  currentStock: number | '';
+  minStock: number | '';
+  costPerUnit: number | '';
+}
+
 export const Inventory: React.FC = () => {
   const { ingredients, addIngredient, updateIngredientStock, deleteIngredient } = useBakery();
   
@@ -18,40 +27,46 @@ export const Inventory: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Form State for New Ingredient
-  const [newIng, setNewIng] = useState<Partial<Ingredient>>({
+  // Form State for New Ingredient - Initialized with empty strings for numbers
+  const [newIng, setNewIng] = useState<IngredientForm>({
     name: '',
     unit: UnitType.GRAMS,
-    currentStock: 0,
-    minStock: 0,
-    costPerUnit: 0
+    currentStock: '',
+    minStock: '',
+    costPerUnit: ''
   });
 
   // Handler: Create New
   const handleAdd = () => {
-    if (!newIng.name || newIng.currentStock === undefined) return;
+    if (!newIng.name || newIng.currentStock === '') return;
     
-    const stockInBase = toBaseUnit(newIng.currentStock, newIng.unit as UnitType);
-    const minStockInBase = toBaseUnit(newIng.minStock || 0, newIng.unit as UnitType);
+    // Default to 0 if empty string (though validation above checks currentStock)
+    const stockVal = newIng.currentStock === '' ? 0 : newIng.currentStock;
+    const minStockVal = newIng.minStock === '' ? 0 : newIng.minStock;
+    const costVal = newIng.costPerUnit === '' ? 0 : newIng.costPerUnit;
+
+    const stockInBase = toBaseUnit(stockVal, newIng.unit);
+    const minStockInBase = toBaseUnit(minStockVal, newIng.unit);
 
     const ingredient: Ingredient = {
       id: Date.now().toString(),
       name: newIng.name,
-      unit: newIng.unit as UnitType,
+      unit: newIng.unit,
       currentStock: stockInBase,
       minStock: minStockInBase,
-      costPerUnit: newIng.costPerUnit || 0
+      costPerUnit: costVal
     };
 
     addIngredient(ingredient);
     setIsModalOpen(false);
-    setNewIng({ name: '', unit: UnitType.GRAMS, currentStock: 0, minStock: 0, costPerUnit: 0 });
+    // Reset form
+    setNewIng({ name: '', unit: UnitType.GRAMS, currentStock: '', minStock: '', costPerUnit: '' });
   };
 
   // Handler: Open Edit Modal
   const handleEditClick = (ing: Ingredient) => {
     setEditingItem(ing);
-    // Show value in preferred unit (e.g. if stock is 1500g and unit is kg, show 1.5)
+    // Show value in preferred unit
     const val = fromBaseUnit(ing.currentStock, ing.unit);
     setEditStockValue(val.toString());
     setNewPurchasePrice(''); // Reset price
@@ -203,7 +218,8 @@ export const Inventory: React.FC = () => {
                     type="number"
                     className="w-full p-2 border border-slate-300 rounded-lg"
                     value={newIng.costPerUnit}
-                    onChange={e => setNewIng({...newIng, costPerUnit: Number(e.target.value)})}
+                    onChange={e => setNewIng({...newIng, costPerUnit: e.target.value === '' ? '' : Number(e.target.value)})}
+                    placeholder="0.00"
                   />
                 </div>
               </div>
@@ -214,7 +230,8 @@ export const Inventory: React.FC = () => {
                     type="number"
                     className="w-full p-2 border border-slate-300 rounded-lg"
                     value={newIng.currentStock}
-                    onChange={e => setNewIng({...newIng, currentStock: Number(e.target.value)})}
+                    onChange={e => setNewIng({...newIng, currentStock: e.target.value === '' ? '' : Number(e.target.value)})}
+                    placeholder="0"
                   />
                 </div>
                 <div>
@@ -223,7 +240,8 @@ export const Inventory: React.FC = () => {
                     type="number"
                     className="w-full p-2 border border-slate-300 rounded-lg"
                     value={newIng.minStock}
-                    onChange={e => setNewIng({...newIng, minStock: Number(e.target.value)})}
+                    onChange={e => setNewIng({...newIng, minStock: e.target.value === '' ? '' : Number(e.target.value)})}
+                    placeholder="0"
                   />
                 </div>
               </div>

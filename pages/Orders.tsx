@@ -15,7 +15,7 @@ export const Orders: React.FC = () => {
 
   const [date, setDate] = useState('');
   const [selectedProduct, setSelectedProduct] = useState('');
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState<number | ''>(1);
   const [cart, setCart] = useState<{productId: string, quantity: number}[]>([]);
   
   // Error state for validation
@@ -23,7 +23,8 @@ export const Orders: React.FC = () => {
 
   const addToCart = () => {
     if(!selectedProduct) return;
-    setCart([...cart, { productId: selectedProduct, quantity: qty }]);
+    const finalQty = qty === '' ? 1 : qty;
+    setCart([...cart, { productId: selectedProduct, quantity: finalQty }]);
     setSelectedProduct('');
     setQty(1);
     setError('');
@@ -231,7 +232,7 @@ export const Orders: React.FC = () => {
                         min="1"
                         className="w-20 p-2 border rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none" 
                         value={qty} 
-                        onChange={e => setQty(Math.max(1, Number(e.target.value)))} 
+                        onChange={e => setQty(e.target.value === '' ? '' : Math.max(1, Number(e.target.value)))} 
                     />
                     <button 
                         onClick={addToCart} 
