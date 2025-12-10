@@ -3,6 +3,7 @@ import { useBakery } from '../context/BakeryContext';
 import { Order, OrderStatus } from '../types';
 import { STATUS_COLORS } from '../constants';
 import { Plus, X, Clock, AlertCircle, User } from 'lucide-react';
+import { formatCurrency } from '../utils/conversions';
 
 export const Orders: React.FC = () => {
   const { orders, products, customers, addOrder, updateOrderStatus } = useBakery();
@@ -137,7 +138,7 @@ export const Orders: React.FC = () => {
                   return <li key={idx} className="flex gap-2"><span>{item.quantity}x</span> <span>{pName}</span></li>
                 })}
               </ul>
-              <div className="mt-2 ml-6 font-bold text-slate-800">Total: ${order.totalPrice}</div>
+              <div className="mt-2 ml-6 font-bold text-slate-800">Total: {formatCurrency(order.totalPrice)}</div>
             </div>
 
             <div className="flex flex-col gap-2 justify-center border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-4 min-w-[200px]">
@@ -225,7 +226,7 @@ export const Orders: React.FC = () => {
                         onChange={e => setSelectedProduct(e.target.value)}
                     >
                         <option value="">Seleccionar Producto...</option>
-                        {products.map(p => <option key={p.id} value={p.id}>{p.name} (${p.price})</option>)}
+                        {products.map(p => <option key={p.id} value={p.id}>{p.name} ({formatCurrency(p.price)})</option>)}
                     </select>
                     <input 
                         type="number" 

@@ -2,14 +2,17 @@ import React, { useState } from 'react';
 import { useBakery } from '../context/BakeryContext';
 import { Product, RecipeItem, UnitType, Ingredient } from '../types';
 import { UNIT_OPTIONS } from '../constants';
-import { Plus, Trash2, ChevronDown, ChevronUp, Calculator, DollarSign, ArrowRight } from 'lucide-react';
-import { formatStock, fromBaseUnit } from '../utils/conversions';
+import { Plus, Trash2, ChevronDown, ChevronUp, Calculator, DollarSign, ArrowRight, Edit2 } from 'lucide-react';
+import { formatStock, fromBaseUnit, formatCurrency } from '../utils/conversions';
 
 export const Recipes: React.FC = () => {
-  const { products, ingredients, addProduct } = useBakery();
+  const { products, ingredients, addProduct, updateProduct } = useBakery();
   const [isCreating, setIsCreating] = useState(false);
   
-  // New Product State
+  // State to track if we are editing an existing product
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  
+  // Form State
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState<number | ''>('');
   const [recipeItems, setRecipeItems] = useState<RecipeItem[]>([]);
@@ -37,16 +40,48 @@ export const Recipes: React.FC = () => {
     setSelectedIngId('');
   };
 
+  const handleEditClick = (product: Product) => {
+    setEditingProduct(product);
+    setProductName(product.name);
+    setProductPrice(product.price);
+    setRecipeItems([...product.recipe]); // Clone array
+    
+    // Reset calculator fields as they are transient
+    setFixedCosts('');
+    setEstimatedUnits('');
+    
+    setIsCreating(true);
+  };
+
   const handleSaveProduct = () => {
     if(!productName || recipeItems.length === 0 || !productPrice) return;
-    const newProd: Product = {
-      id: Date.now().toString(),
-      name: productName,
-      price: Number(productPrice),
-      recipe: recipeItems
-    };
-    addProduct(newProd);
+    
+    if (editingProduct) {
+        // Update Existing
+        const updatedProd: Product = {
+            ...editingProduct,
+            name: productName,
+            price: Number(productPrice),
+            recipe: recipeItems
+        };
+        updateProduct(updatedProd);
+    } else {
+        // Create New
+        const newProd: Product = {
+            id: Date.now().toString(),
+            name: productName,
+            price: Number(productPrice),
+            recipe: recipeItems
+        };
+        addProduct(newProd);
+    }
+    
+    closeForm();
+  };
+
+  const closeForm = () => {
     setIsCreating(false);
+    setEditingProduct(null);
     resetForm();
   };
 
@@ -56,6 +91,7 @@ export const Recipes: React.FC = () => {
     setRecipeItems([]);
     setFixedCosts('');
     setEstimatedUnits('');
+    setEditingProduct(null);
   };
 
   // Cost Estimation
@@ -103,7 +139,7 @@ export const Recipes: React.FC = () => {
       
       // Margin 60% -> Cost is 40% of price
       const price = totalUnitCost / (1 - 0.60);
-      return price;
+      return Math.round(price); // Round to integer for CLP
   };
 
   const suggestedPrice = calculateSuggestedPrice();
@@ -113,7 +149,14 @@ export const Recipes: React.FC = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-800">Recetas y Productos</h2>
         <button 
-          onClick={() => setIsCreating(!isCreating)}
+          onClick={() => {
+              if(isCreating) {
+                  closeForm();
+              } else {
+                  resetForm();
+                  setIsCreating(true);
+              }
+          }}
           className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 shadow-sm"
         >
           {isCreating ? 'Cancelar' : <><Plus size={18} /> Nuevo Producto</>}
@@ -122,7 +165,9 @@ export const Recipes: React.FC = () => {
 
       {isCreating && (
         <div className="bg-white p-6 rounded-xl border border-indigo-100 shadow-lg space-y-6 animate-in fade-in slide-in-from-top-4">
-          <h3 className="font-bold text-lg text-slate-800 border-b pb-2">Crear Nueva Receta</h3>
+          <h3 className="font-bold text-lg text-slate-800 border-b pb-2">
+              {editingProduct ? 'Editar Receta' : 'Crear Nueva Receta'}
+          </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
@@ -150,7 +195,7 @@ export const Recipes: React.FC = () => {
                         }}
                       >
                         <option value="">-- Ingrediente --</option>
-                        {ingredients.map(i => <option key={i.id} value={i.id}>{i.name} (${i.costPerUnit}/{i.unit})</option>)}
+                        {ingredients.map(i => <option key={i.id} value={i.id}>{i.name} ({formatCurrency(i.costPerUnit)}/{i.unit})</option>)}
                       </select>
                       
                       <div className="flex gap-2 w-full sm:w-auto">
@@ -196,7 +241,7 @@ export const Recipes: React.FC = () => {
                          })}
                          <li className="flex justify-between items-center pt-2 border-t border-slate-200 mt-2">
                             <span className="text-slate-500 font-medium">Costo Variable Total (CVU):</span>
-                            <span className="text-slate-800 font-bold">${cvu.toFixed(2)}</span>
+                            <span className="text-slate-800 font-bold">{formatCurrency(cvu)}</span>
                          </li>
                        </ul>
                     ) : (
@@ -222,7 +267,7 @@ export const Recipes: React.FC = () => {
                                <input 
                                  type="number" 
                                  className="w-full pl-5 p-2 border border-indigo-200 rounded text-sm focus:ring-1 focus:ring-indigo-500"
-                                 placeholder="0.00"
+                                 placeholder="0"
                                  value={fixedCosts}
                                  onChange={e => setFixedCosts(e.target.value === '' ? '' : Number(e.target.value))}
                                />
@@ -243,15 +288,15 @@ export const Recipes: React.FC = () => {
                       <div className="bg-white p-3 rounded-lg border border-indigo-100 space-y-1">
                           <div className="flex justify-between text-xs text-slate-500">
                               <span>Costo Variable (CVU):</span>
-                              <span>${cvu.toFixed(2)}</span>
+                              <span>{formatCurrency(cvu)}</span>
                           </div>
                           <div className="flex justify-between text-xs text-slate-500">
                               <span>Costo Fijo Unitario (CFT/Q):</span>
-                              <span>${(Number(fixedCosts) && Number(estimatedUnits)) ? (Number(fixedCosts)/Number(estimatedUnits)).toFixed(2) : '0.00'}</span>
+                              <span>{formatCurrency((Number(fixedCosts) && Number(estimatedUnits)) ? (Number(fixedCosts)/Number(estimatedUnits)) : 0)}</span>
                           </div>
                           <div className="flex justify-between text-xs text-slate-800 font-semibold pt-1 border-t border-slate-100">
                               <span>Costo Total Unitario:</span>
-                              <span>${(cvu + ((Number(fixedCosts) && Number(estimatedUnits)) ? (Number(fixedCosts)/Number(estimatedUnits)) : 0)).toFixed(2)}</span>
+                              <span>{formatCurrency(cvu + ((Number(fixedCosts) && Number(estimatedUnits)) ? (Number(fixedCosts)/Number(estimatedUnits)) : 0))}</span>
                           </div>
                       </div>
 
@@ -261,12 +306,12 @@ export const Recipes: React.FC = () => {
                               <span className="text-[10px] text-indigo-400">Margen 60%</span>
                           </div>
                           <div className="text-xl font-bold text-indigo-800">
-                              ${isFinite(suggestedPrice) ? suggestedPrice.toFixed(2) : '0.00'}
+                              {formatCurrency(suggestedPrice)}
                           </div>
                       </div>
                       
                       <button 
-                        onClick={() => setProductPrice(Number(suggestedPrice.toFixed(2)))}
+                        onClick={() => setProductPrice(suggestedPrice)}
                         disabled={!isFinite(suggestedPrice) || suggestedPrice <= 0}
                         className="w-full py-1.5 text-xs bg-indigo-200 text-indigo-800 rounded font-semibold hover:bg-indigo-300 transition-colors disabled:opacity-50"
                       >
@@ -283,7 +328,7 @@ export const Recipes: React.FC = () => {
                             className="w-full pl-9 p-3 border border-slate-300 rounded-lg text-lg font-bold text-slate-800" 
                             value={productPrice} 
                             onChange={e => setProductPrice(e.target.value === '' ? '' : Number(e.target.value))} 
-                            placeholder="0.00"
+                            placeholder="0"
                         />
                     </div>
                   </div>
@@ -296,7 +341,7 @@ export const Recipes: React.FC = () => {
                 onClick={handleSaveProduct}
                 className="bg-green-600 text-white py-3 px-8 rounded-lg font-bold hover:bg-green-700 shadow-md flex items-center gap-2"
              >
-                Guardar Producto <ArrowRight size={18} />
+                {editingProduct ? 'Actualizar Producto' : 'Guardar Producto'} <ArrowRight size={18} />
              </button>
           </div>
         </div>
@@ -305,14 +350,23 @@ export const Recipes: React.FC = () => {
       {/* Product List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {products.map(product => (
-          <ProductCard key={product.id} product={product} ingredients={ingredients} />
+          <ProductCard 
+            key={product.id} 
+            product={product} 
+            ingredients={ingredients} 
+            onEdit={handleEditClick}
+          />
         ))}
       </div>
     </div>
   );
 };
 
-const ProductCard: React.FC<{ product: Product, ingredients: Ingredient[] }> = ({ product, ingredients }) => {
+const ProductCard: React.FC<{ 
+    product: Product, 
+    ingredients: Ingredient[], 
+    onEdit: (p: Product) => void 
+}> = ({ product, ingredients, onEdit }) => {
     const [expanded, setExpanded] = useState(false);
     const { deleteProduct } = useBakery();
 
@@ -321,6 +375,11 @@ const ProductCard: React.FC<{ product: Product, ingredients: Ingredient[] }> = (
         if(window.confirm(`¿Estás seguro que deseas eliminar "${product.name}"? Esta acción no se puede deshacer.`)) {
             deleteProduct(product.id);
         }
+    };
+
+    const handleEdit = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onEdit(product);
     };
 
     return (
@@ -337,8 +396,15 @@ const ProductCard: React.FC<{ product: Product, ingredients: Ingredient[] }> = (
                 </div>
                 <div className="flex items-center gap-3">
                     <span className="font-bold text-emerald-600 text-lg bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">
-                        ${product.price}
+                        {formatCurrency(product.price)}
                     </span>
+                    <button 
+                        onClick={handleEdit}
+                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
+                        title="Editar receta"
+                    >
+                        <Edit2 size={18} />
+                    </button>
                     <button 
                         onClick={handleDelete}
                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
@@ -373,7 +439,7 @@ const ProductCard: React.FC<{ product: Product, ingredients: Ingredient[] }> = (
                                     <span className="font-medium">{ing?.name || 'Desconocido'}</span>
                                     <div className="text-right">
                                         <div className="font-bold text-slate-600">{r.quantity} {r.unit}</div>
-                                        <div className="text-[10px] text-slate-400">~${costShare.toFixed(2)}</div>
+                                        <div className="text-[10px] text-slate-400">~{formatCurrency(costShare)}</div>
                                     </div>
                                 </li>
                             );

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useBakery } from '../context/BakeryContext';
 import { Printer, TrendingUp, Package, Calendar, DollarSign } from 'lucide-react';
-import { formatStock } from '../utils/conversions';
+import { formatStock, formatCurrency } from '../utils/conversions';
 
 export const Reports: React.FC = () => {
   const { orders, products, ingredients } = useBakery();
@@ -66,7 +66,7 @@ export const Reports: React.FC = () => {
         <div className="grid grid-cols-3 gap-6 mb-8">
            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 text-center print:border-slate-300">
               <span className="text-xs text-slate-500 uppercase font-semibold">Ventas Totales</span>
-              <p className="text-2xl font-bold text-slate-800">${totalSales.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-slate-800">{formatCurrency(totalSales)}</p>
            </div>
            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 text-center print:border-slate-300">
               <span className="text-xs text-slate-500 uppercase font-semibold">Pedidos Entregados</span>
@@ -75,7 +75,7 @@ export const Reports: React.FC = () => {
            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 text-center print:border-slate-300">
               <span className="text-xs text-slate-500 uppercase font-semibold">Ticket Promedio</span>
               <p className="text-2xl font-bold text-slate-800">
-                ${totalOrders > 0 ? (totalSales / totalOrders).toFixed(2) : '0.00'}
+                {formatCurrency(totalOrders > 0 ? (totalSales / totalOrders) : 0)}
               </p>
            </div>
         </div>
@@ -97,7 +97,7 @@ export const Reports: React.FC = () => {
                  <tr key={i}>
                    <td className="py-2 px-3 font-medium">{p.name}</td>
                    <td className="py-2 px-3 text-right">{p.qty}</td>
-                   <td className="py-2 px-3 text-right font-bold">${p.revenue.toLocaleString()}</td>
+                   <td className="py-2 px-3 text-right font-bold">{formatCurrency(p.revenue)}</td>
                  </tr>
                )) : (
                  <tr><td colSpan={3} className="py-4 text-center text-slate-500">Sin ventas registradas este mes.</td></tr>

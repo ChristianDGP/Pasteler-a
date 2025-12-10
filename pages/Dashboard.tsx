@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useBakery } from '../context/BakeryContext';
 import { AlertTriangle, TrendingUp, ShoppingBag, Clock, DollarSign, XCircle, CheckCircle2, X, ChevronRight } from 'lucide-react';
-import { formatStock } from '../utils/conversions';
+import { formatStock, formatCurrency } from '../utils/conversions';
 import { STATUS_COLORS } from '../constants';
 
 type DetailViewType = 'pending' | 'today' | 'lowStock' | null;
@@ -94,7 +94,7 @@ export const Dashboard: React.FC = () => {
                 })}
               </ul>
               <div className="text-right font-bold text-slate-800 text-sm">
-                Total: ${order.totalPrice}
+                Total: {formatCurrency(order.totalPrice)}
               </div>
             </div>
           ))
@@ -129,7 +129,7 @@ export const Dashboard: React.FC = () => {
         <div className="grid grid-cols-2 gap-8">
           <div>
              <p className="text-sm text-slate-300 mb-1">Ventas Efectivas (Entregado)</p>
-             <p className="text-3xl font-bold text-emerald-400">${totalRevenue.toLocaleString()}</p>
+             <p className="text-3xl font-bold text-emerald-400">{formatCurrency(totalRevenue)}</p>
              <div className="flex items-center gap-1 mt-1 text-xs text-emerald-200/70">
                 <CheckCircle2 size={12} /> {deliveredOrders.length} pedidos cobrados
              </div>
@@ -137,7 +137,7 @@ export const Dashboard: React.FC = () => {
           
           <div className="border-l border-white/10 pl-8">
              <p className="text-sm text-slate-300 mb-1">Pérdidas / Cancelados</p>
-             <p className="text-2xl font-bold text-red-400">${lostRevenue.toLocaleString()}</p>
+             <p className="text-2xl font-bold text-red-400">{formatCurrency(lostRevenue)}</p>
              <div className="flex items-center gap-1 mt-1 text-xs text-red-200/70">
                 <XCircle size={12} /> {cancelledOrders.length} pedidos no concretados
              </div>

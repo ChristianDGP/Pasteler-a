@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useBakery } from '../context/BakeryContext';
 import { Ingredient, UnitType } from '../types';
 import { UNIT_OPTIONS, BASE_UNITS } from '../constants';
-import { formatStock, toBaseUnit, fromBaseUnit } from '../utils/conversions';
+import { formatStock, toBaseUnit, fromBaseUnit, formatCurrency } from '../utils/conversions';
 import { Plus, Search, Edit2, Save, X, RefreshCw, TrendingUp, Trash2 } from 'lucide-react';
 
 // Local interface to handle form inputs allowing empty strings
@@ -150,7 +150,7 @@ export const Inventory: React.FC = () => {
                       {formatStock(ing.currentStock, ing.unit)}
                     </td>
                     <td className="px-6 py-4 text-slate-500">
-                      ${ing.costPerUnit.toFixed(2)} / {ing.unit}
+                      {formatCurrency(ing.costPerUnit)} / {ing.unit}
                     </td>
                     <td className="px-6 py-4 text-slate-500 text-sm">
                       {BASE_UNITS[ing.unit]}
@@ -219,7 +219,7 @@ export const Inventory: React.FC = () => {
                     className="w-full p-2 border border-slate-300 rounded-lg"
                     value={newIng.costPerUnit}
                     onChange={e => setNewIng({...newIng, costPerUnit: e.target.value === '' ? '' : Number(e.target.value)})}
-                    placeholder="0.00"
+                    placeholder="0"
                   />
                 </div>
               </div>
@@ -309,7 +309,7 @@ export const Inventory: React.FC = () => {
                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
                      <input 
                       type="number"
-                      step="0.01"
+                      step="1"
                       placeholder={`Costo por ${editingItem.unit}`}
                       className="w-full pl-7 pr-3 py-2 border border-green-200 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 text-sm"
                       value={newPurchasePrice}

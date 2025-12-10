@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useBakery } from '../context/BakeryContext';
 import { Customer } from '../types';
 import { Plus, Search, Edit2, Trash2, Phone, Mail, MapPin, X, User } from 'lucide-react';
+import { formatCurrency } from '../utils/conversions';
 
 export const Customers: React.FC = () => {
   const { customers, addCustomer, updateCustomer, deleteCustomer, orders } = useBakery();
@@ -116,7 +117,7 @@ export const Customers: React.FC = () => {
 
               <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
                  <span className="text-xs text-slate-500">Inversión Total</span>
-                 <span className="font-bold text-emerald-600">${stats.spent.toLocaleString()}</span>
+                 <span className="font-bold text-emerald-600">{formatCurrency(stats.spent)}</span>
               </div>
             </div>
           );

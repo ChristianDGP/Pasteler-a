@@ -40,3 +40,16 @@ export const formatStock = (amount: number, preferredUnit: UnitType): string => 
   const val = fromBaseUnit(amount, preferredUnit);
   return `${val.toFixed(preferredUnit === UnitType.UNITS ? 0 : 1)} ${preferredUnit}`;
 };
+
+/**
+ * Formats currency for Chile (CLP): No decimals, uses dots for thousands.
+ * e.g. 1500 -> "$1.500"
+ */
+export const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
