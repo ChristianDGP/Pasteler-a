@@ -98,16 +98,17 @@ const loadFromStorage = <T,>(key: string, fallback: T): T => {
 
 export const BakeryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Initialize state from LocalStorage or Fallback
-  const [ingredients, setIngredients] = useState<Ingredient[]>(() => loadFromStorage('bakery_ingredients', INITIAL_INGREDIENTS));
-  const [products, setProducts] = useState<Product[]>(() => loadFromStorage('bakery_products', INITIAL_PRODUCTS));
-  const [orders, setOrders] = useState<Order[]>(() => loadFromStorage('bakery_orders', INITIAL_ORDERS));
-  const [customers, setCustomers] = useState<Customer[]>(() => loadFromStorage('bakery_customers', INITIAL_CUSTOMERS));
+  // UPDATED KEYS TO 'v2' TO FORCE RESET FOR USER
+  const [ingredients, setIngredients] = useState<Ingredient[]>(() => loadFromStorage('bakery_ingredients_v2', INITIAL_INGREDIENTS));
+  const [products, setProducts] = useState<Product[]>(() => loadFromStorage('bakery_products_v2', INITIAL_PRODUCTS));
+  const [orders, setOrders] = useState<Order[]>(() => loadFromStorage('bakery_orders_v2', INITIAL_ORDERS));
+  const [customers, setCustomers] = useState<Customer[]>(() => loadFromStorage('bakery_customers_v2', INITIAL_CUSTOMERS));
 
-  // Persistence Effects
-  useEffect(() => { localStorage.setItem('bakery_ingredients', JSON.stringify(ingredients)); }, [ingredients]);
-  useEffect(() => { localStorage.setItem('bakery_products', JSON.stringify(products)); }, [products]);
-  useEffect(() => { localStorage.setItem('bakery_orders', JSON.stringify(orders)); }, [orders]);
-  useEffect(() => { localStorage.setItem('bakery_customers', JSON.stringify(customers)); }, [customers]);
+  // Persistence Effects - UPDATED KEYS TO 'v2'
+  useEffect(() => { localStorage.setItem('bakery_ingredients_v2', JSON.stringify(ingredients)); }, [ingredients]);
+  useEffect(() => { localStorage.setItem('bakery_products_v2', JSON.stringify(products)); }, [products]);
+  useEffect(() => { localStorage.setItem('bakery_orders_v2', JSON.stringify(orders)); }, [orders]);
+  useEffect(() => { localStorage.setItem('bakery_customers_v2', JSON.stringify(customers)); }, [customers]);
 
   /* --- INGREDIENTS --- */
   const addIngredient = (ing: Ingredient) => setIngredients(prev => [...prev, ing]);
