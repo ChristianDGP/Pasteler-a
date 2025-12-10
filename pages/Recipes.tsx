@@ -245,6 +245,7 @@ export const Recipes: React.FC = () => {
                                 value={selectedUnit}
                                 onChange={e => setSelectedUnit(e.target.value as UnitType)}
                               >
+                                {/* Show all units to allow flexibility */}
                                 {UNIT_OPTIONS.map(u => (
                                   <option key={u.value} value={u.value}>{u.label}</option>
                                 ))}
@@ -431,35 +432,32 @@ const ProductCard: React.FC<{
     const { deleteProduct } = useBakery();
 
     const handleDelete = (e: React.MouseEvent) => {
+        // e.stopPropagation() is less critical now that buttons are structurally separated, 
+        // but kept for safety.
         e.stopPropagation();
         if(window.confirm(`¿Estás seguro que deseas eliminar "${product.name}"? Esta acción no se puede deshacer.`)) {
             deleteProduct(product.id);
         }
     };
 
-    const handleEdit = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        onEdit(product);
-    };
-
     return (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
-            <div 
-                className="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50"
-                onClick={() => setExpanded(!expanded)}
-            >
-                <div className="flex-1">
+            <div className="p-4 flex justify-between items-center hover:bg-slate-50">
+                <div 
+                    className="flex-1 cursor-pointer"
+                    onClick={() => setExpanded(!expanded)}
+                >
                     <h3 className="font-bold text-slate-800 text-lg">{product.name}</h3>
                     <p className="text-slate-500 text-sm flex items-center gap-2">
                         {product.recipe.length} ingredientes
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <span className="font-bold text-emerald-600 text-lg bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">
+                <div className="flex items-center gap-3 pl-4">
+                    <span className="font-bold text-emerald-600 text-lg bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100 whitespace-nowrap">
                         {formatCurrency(product.price)}
                     </span>
                     <button 
-                        onClick={handleEdit}
+                        onClick={(e) => { e.stopPropagation(); onEdit(product); }}
                         className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
                         title="Editar receta"
                     >
@@ -472,7 +470,12 @@ const ProductCard: React.FC<{
                     >
                         <Trash2 size={18} />
                     </button>
-                    {expanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
+                    <button
+                        onClick={() => setExpanded(!expanded)}
+                        className="p-1 text-slate-400"
+                    >
+                        {expanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </button>
                 </div>
             </div>
             {expanded && (
