@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useBakery } from '../context/BakeryContext';
 import { Product, RecipeItem, UnitType, Ingredient } from '../types';
 import { UNIT_OPTIONS } from '../constants';
-import { Plus, Trash2, ChevronDown, ChevronUp, Calculator, DollarSign, ArrowRight, Edit2 } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Calculator, DollarSign, ArrowRight, Edit2, Save } from 'lucide-react';
 import { formatStock, fromBaseUnit, formatCurrency } from '../utils/conversions';
 
 export const Recipes: React.FC = () => {
@@ -29,7 +29,11 @@ export const Recipes: React.FC = () => {
   const handleAddIngredient = () => {
     if(!selectedIngId || !amount || Number(amount) <= 0) return;
     
-    // Find unit logic: prefer selected, default to ingredient's unit
+    // Check if ingredient already exists in the list to avoid duplicates (optional, but good practice)
+    // If it exists, we could just add to the quantity, but here we'll append for simplicity or warn? 
+    // Let's allow adding it as a separate line, or user can edit the existing one.
+    // Better UX: If exists, update quantity? No, let's keep it simple: Add to list.
+    
     setRecipeItems([...recipeItems, {
       ingredientId: selectedIngId,
       quantity: Number(amount),
@@ -40,11 +44,24 @@ export const Recipes: React.FC = () => {
     setSelectedIngId('');
   };
 
+  const handleUpdateItemQuantity = (index: number, newQty: string) => {
+    const val = newQty === '' ? 0 : parseFloat(newQty);
+    const updatedItems = [...recipeItems];
+    updatedItems[index].quantity = val;
+    setRecipeItems(updatedItems);
+  };
+
+  const handleDeleteItem = (index: number) => {
+    const updatedItems = recipeItems.filter((_, i) => i !== index);
+    setRecipeItems(updatedItems);
+  };
+
   const handleEditClick = (product: Product) => {
     setEditingProduct(product);
     setProductName(product.name);
     setProductPrice(product.price);
-    setRecipeItems([...product.recipe]); // Clone array
+    // Clone array to allow editing without mutating original until save
+    setRecipeItems(product.recipe.map(item => ({...item}))); 
     
     // Reset calculator fields as they are transient
     setFixedCosts('');
@@ -56,13 +73,16 @@ export const Recipes: React.FC = () => {
   const handleSaveProduct = () => {
     if(!productName || recipeItems.length === 0 || !productPrice) return;
     
+    // Filter out items with 0 quantity just in case
+    const validItems = recipeItems.filter(item => item.quantity > 0);
+
     if (editingProduct) {
         // Update Existing
         const updatedProd: Product = {
             ...editingProduct,
             name: productName,
             price: Number(productPrice),
-            recipe: recipeItems
+            recipe: validItems
         };
         updateProduct(updatedProd);
     } else {
@@ -71,7 +91,7 @@ export const Recipes: React.FC = () => {
             id: Date.now().toString(),
             name: productName,
             price: Number(productPrice),
-            recipe: recipeItems
+            recipe: validItems
         };
         addProduct(newProd);
     }
@@ -184,66 +204,92 @@ export const Recipes: React.FC = () => {
                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                     <h4 className="font-medium text-slate-700 mb-3 text-sm uppercase tracking-wide">Ingredientes (Costo Variable)</h4>
                     
-                    <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                      <select 
-                        className="flex-1 p-2 border rounded text-sm"
-                        value={selectedIngId}
-                        onChange={e => {
-                          const ing = ingredients.find(i => i.id === e.target.value);
-                          setSelectedIngId(e.target.value);
-                          if(ing) setSelectedUnit(ing.unit);
-                        }}
-                      >
-                        <option value="">-- Ingrediente --</option>
-                        {ingredients.map(i => <option key={i.id} value={i.id}>{i.name} ({formatCurrency(i.costPerUnit)}/{i.unit})</option>)}
-                      </select>
-                      
-                      <div className="flex gap-2 w-full sm:w-auto">
-                          <input 
-                            type="number" 
-                            className="w-20 p-2 border rounded text-sm" 
-                            placeholder="Cant."
-                            value={amount}
-                            onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                          />
-                          
+                    <div className="flex flex-col gap-2 mb-4 bg-white p-3 rounded border border-slate-200">
+                      <label className="text-xs font-bold text-slate-500">Agregar Ingrediente</label>
+                      <div className="flex flex-col sm:flex-row gap-2">
                           <select 
-                            className="w-24 p-2 border rounded text-sm"
-                            value={selectedUnit}
-                            onChange={e => setSelectedUnit(e.target.value as UnitType)}
+                            className="flex-1 p-2 border rounded text-sm outline-none focus:border-indigo-500"
+                            value={selectedIngId}
+                            onChange={e => {
+                              const ing = ingredients.find(i => i.id === e.target.value);
+                              setSelectedIngId(e.target.value);
+                              if(ing) setSelectedUnit(ing.unit);
+                            }}
                           >
-                            {UNIT_OPTIONS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+                            <option value="">-- Seleccionar --</option>
+                            {ingredients.map(i => <option key={i.id} value={i.id}>{i.name} ({formatCurrency(i.costPerUnit)}/{i.unit})</option>)}
                           </select>
+                          
+                          <div className="flex gap-2">
+                              <input 
+                                type="number" 
+                                className="w-20 p-2 border rounded text-sm" 
+                                placeholder="Cant."
+                                value={amount}
+                                onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                              />
+                              
+                              <select 
+                                className="w-24 p-2 border rounded text-sm bg-slate-100"
+                                value={selectedUnit}
+                                onChange={e => setSelectedUnit(e.target.value as UnitType)}
+                                disabled // Keep unit fixed to ingredient default to avoid complexity for now, or enable if needed
+                              >
+                                {UNIT_OPTIONS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+                              </select>
+                              
+                              <button 
+                                onClick={handleAddIngredient}
+                                disabled={!selectedIngId}
+                                className="bg-indigo-600 text-white px-3 py-2 rounded hover:bg-indigo-700 disabled:bg-slate-300 flex items-center justify-center"
+                              >
+                                <Plus size={18} />
+                              </button>
+                          </div>
                       </div>
-                      
-                      <button 
-                        onClick={handleAddIngredient}
-                        disabled={!selectedIngId}
-                        className="bg-slate-800 text-white px-3 py-2 rounded hover:bg-slate-900 disabled:bg-slate-300"
-                      >
-                        <Plus size={18} />
-                      </button>
                     </div>
 
                     {recipeItems.length > 0 ? (
-                       <ul className="space-y-2 mb-2">
+                       <div className="space-y-2 mb-2">
+                         <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 px-2">
+                            <div className="col-span-5">Ingrediente</div>
+                            <div className="col-span-5 text-right">Cantidad</div>
+                            <div className="col-span-2 text-center"></div>
+                         </div>
                          {recipeItems.map((item, idx) => {
-                           const ingName = ingredients.find(i => i.id === item.ingredientId)?.name;
+                           const ingName = ingredients.find(i => i.id === item.ingredientId)?.name || 'Ingrediente eliminado';
                            return (
-                             <li key={idx} className="flex justify-between items-center bg-white p-2 border rounded shadow-sm text-sm">
-                               <span>{ingName}</span>
-                               <div className="flex items-center gap-3">
-                                 <span className="font-bold text-slate-600">{item.quantity} {item.unit}</span>
-                                 <button onClick={() => setRecipeItems(prev => prev.filter((_, i) => i !== idx))} className="text-red-500"><Trash2 size={14} /></button>
+                             <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-white p-2 border rounded shadow-sm text-sm">
+                               <div className="col-span-5 truncate font-medium text-slate-700" title={ingName}>
+                                 {ingName}
                                </div>
-                             </li>
+                               <div className="col-span-5 flex justify-end items-center gap-1">
+                                 <input 
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    className="w-20 p-1 border border-slate-200 rounded text-right focus:border-indigo-500 outline-none"
+                                    value={item.quantity === 0 ? '' : item.quantity}
+                                    onChange={(e) => handleUpdateItemQuantity(idx, e.target.value)}
+                                 />
+                                 <span className="text-xs text-slate-500 w-8">{item.unit}</span>
+                               </div>
+                               <div className="col-span-2 text-center">
+                                 <button 
+                                    onClick={() => handleDeleteItem(idx)} 
+                                    className="text-red-400 hover:text-red-600 p-1 rounded-full hover:bg-red-50"
+                                 >
+                                    <Trash2 size={16} />
+                                 </button>
+                               </div>
+                             </div>
                            )
                          })}
-                         <li className="flex justify-between items-center pt-2 border-t border-slate-200 mt-2">
-                            <span className="text-slate-500 font-medium">Costo Variable Total (CVU):</span>
-                            <span className="text-slate-800 font-bold">{formatCurrency(cvu)}</span>
-                         </li>
-                       </ul>
+                         <div className="flex justify-between items-center pt-3 border-t border-slate-200 mt-3">
+                            <span className="text-slate-500 font-medium text-sm">Costo Variable Total (CVU):</span>
+                            <span className="text-slate-800 font-bold text-lg">{formatCurrency(cvu)}</span>
+                         </div>
+                       </div>
                     ) : (
                         <p className="text-xs text-slate-400 italic text-center py-4">Agrega ingredientes para calcular el costo.</p>
                     )}
@@ -341,7 +387,7 @@ export const Recipes: React.FC = () => {
                 onClick={handleSaveProduct}
                 className="bg-green-600 text-white py-3 px-8 rounded-lg font-bold hover:bg-green-700 shadow-md flex items-center gap-2"
              >
-                {editingProduct ? 'Actualizar Producto' : 'Guardar Producto'} <ArrowRight size={18} />
+                {editingProduct ? 'Actualizar Producto' : 'Guardar Producto'} <Save size={18} />
              </button>
           </div>
         </div>
